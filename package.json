@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.2",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.14.0",
+    "react-player": "^3.4.0",
+    "recharts": "^3.8.1",
+    "swr": "^2.4.1",
+    "tailwind-merge": "^3.6.0"
+  }
+}

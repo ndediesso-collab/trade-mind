@@ -1,0 +1,810 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { AuroraBackground } from "@/components/ui/aurora-background";
+import { 
+  ArrowLeft, 
+  Calculator, 
+  Save, 
+  RotateCcw, 
+  BrainCircuit, 
+  Target, 
+  ShieldAlert, 
+  Activity,
+  X,
+  Zap,
+  GraduationCap,
+  Send,
+  ShieldCheck,
+  Flame,
+  LineChart,
+  Lock,
+  Info,
+  PlayCircle,
+  MessageSquare
+} from "lucide-react";
+import Link from "next/link";
+import ReactPlayer from 'react-player';
+
+// --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
+
+export default function SwingAnalysis() {
+  
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
+  const closeVideo = () => setPlayingVideoUrl(null);
+
+  // 1. On utilise 'any' pour le dictionnaire afin de désactiver les erreurs de typage strict
+  const glossary: any = {
+    "OB": { definition: "L'Order Block est une zone d'accumulation institutionnelle.", url: "https://youtu.be/NYBvIcPX7XI?si=jmVr_qc31cduWcR_" },
+    "FVG": { definition: "Le Fair Value Gap est un déséquilibre du prix.", url: "https://youtu.be/skk0sm6LN6M?si=momYUhKK-E1xLAuT" },
+    "Liquidity": { definition: "Zones de concentration d'ordres stop.", url: "https://youtu.be/QPQWlXQ-El4?si=LgdQ-7m1VMiaiEwR" },
+    "Taux": { definition: "Différentiel de taux directeur entre deux(en générale) banques centrales.", url: "https://youtu.be/vAyBiASOne4?si=s4gzsbJPko6rlyZZ" },
+    "Inflation": { definition: "Mesure de la hausse des prix à la consommation (CPI).", url: "https://youtu.be/40dtvvLCUCQ?si=wT8GAqsts9QekKsg" },
+    "Rendements": { definition: "Le rendement des obligations d'État (Yields) influence la devise.", url: "https://youtu.be/fAIpO2Xu8FI?si=1beP53nshsUraYOd" },
+    "Geopolitique": { definition: "Influence des tensions internationales sur le marché.", url: "https://youtu.be/Ulq5vBAf9SI?si=xZ7vacvuOoUEpmfz" },
+    "Sentiment": { definition: "L'état d'esprit global du marché (Risk-on(appétit du risque)/Risk-off(peur du risque)).", url: "https://youtu.be/3ID2NFqgaCM?si=TBFAJoOz_L5MCKlQ" },
+    "Tendance": { definition: "Direction générale des prix (sommets/creux).", url: "https://youtu.be/7_oLrv-TIAA?si=kjzxL8l2RhlMXf_c" }
+  };
+  const getEmbedUrl = (url: string) => {
+  if (!url) return "";
+  // Extrait l'ID de la vidéo
+  const videoId = url.split('/').pop()?.split('?')[0] || url.split('v=')[1]?.split('&')[0];
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  };
+  const HelpTooltip = ({ conceptKey, onOpenVideo }: { conceptKey: string, onOpenVideo: (url: string) => void }) => {
+    const [show, setShow] = useState(false);
+    // On accède au glossaire sans typage strict pour éviter le rouge
+    const data = glossary[conceptKey];
+    
+    if (!data) return null;
+
+    return (
+      <div className="relative inline-block ml-1" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+        <Info size={12} className="inline text-blue-500 cursor-help" />
+        {show && (
+          <div className="absolute z-[100] left-0 bottom-6 w-64 bg-[#161B22] border border-blue-500/30 p-4 rounded-2xl shadow-2xl">
+            <p className="text-[10px] text-zinc-300 mb-3">{data.definition}</p>
+            <button 
+              onClick={() => onOpenVideo(data.url)} 
+              className="flex items-center gap-2 text-[9px] font-black uppercase text-blue-400 hover:text-white transition-colors"
+            >
+              <PlayCircle size={12} /> Voir vidéo
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- ÉTATS GÉNÉRAUX & IDENTITY ---
+  const [mode, setMode] = useState("Étudiant");
+  const [statut, setStatut] = useState("Brouillon");
+  const [position, setPosition] = useState("Neutre");
+  const [actif, setActif] = useState("");
+  const [analyse, setAnalyse] = useState("");
+  const [iaFeedback, setIaFeedback] = useState("> MENTOR_IA: Système prêt. En attente de votre saisie structurée.");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // --- EXTRACTION BARRE TECHNIQUE (DATA PRO) ---
+  const [conviction, setConviction] = useState(50);
+  const [entryPrice, setEntryPrice] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
+  const [takeProfit, setTakeProfit] = useState("");
+  const [calculatedRR, setCalculatedRR] = useState<number | null>(null);
+
+  // --- ÉTATS NOUVEAUX : LE CHAT COMPAGNON GUARDIAN ---
+  const [consoleTab, setConsoleTab] = useState("ARCHITECTE"); // "ARCHITECTE" | "GUARDIAN"
+  const [guardianInput, setGuardianInput] = useState("");
+  const [guardianHistory, setGuardianHistory] = useState<string[]>([]);
+  const [isGuardianLoading, setIsGuardianLoading] = useState(false);
+
+  // --- ÉTATS SUIVI IA ---
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSuiviActive, setIsSuiviActive] = useState(false);
+
+  // Id du trade actuellement chargé pour permettre la mise à jour (évite les doublons)
+  const [currentTradeId, setCurrentTradeId] = useState<number | null>(null);
+
+  // Questionnaire strict pour le mode Suivi IA (Identique au mode Étudiant)
+  const questionsSuivi = [
+    "A1 - Actif analysé : L’actif doit être clairement défini (paire précise). ⚠️ Interdiction d’analyser plusieurs actifs simultanément.",
+    "A2 - Biais (Long / Short / Aucun) et score de conviction ? Le biais doit être UNIQUE (pas de neutralité floue). Le score de conviction doit être justifié par au moins 2 éléments concrets (macro + technique). ⚠️ Si conviction > 70% sans justification solide → biais psychologique (excès de confiance). ⚠️ Si conviction < 50% → absence de clarté → trade interdit.",
+    "B1 - Quel est le sentiment global(Risk-on (appétit) ou Risk-off (peur)) et le contexte actuel sur le marché(selon la paire analysée, qu’observe-t-on actuellement sur le marché forex ?) → Justification obligatoire basée sur des éléments concrets (indices, flux, news). → Décrire un contexte clair (tendance, incertitude, compression…). ⚠️ Réponse vague ou sans justification = analyse invalide.",
+    "B2 - Rendements (Yields) : Que fait le rendement de référence (ex: US02Y/GB10Y/...) ? → Direction claire : hausse / baisse / stagnation. → Impact direct sur la devise analysée. ⚠️ Si non relié à ton biais → incohérence macro.",
+    "B3 - Différentiel de taux : Quelle devise a le taux d’intérêt et la politique monétaire les plus attractifs ? Justifiez votre réponse. → Comparaison OBLIGATOIRE entre les deux devises de la paire. ⚠️ Si aucune dominance claire → biais fragile.",
+    "B4 - Inflation & Emploi : Selon les dernières news, quelle économie est la plus forte ? Justifiez votre réponse. → Basé uniquement sur données récentes (pas d’hypothèse). ⚠️ Si contradiction avec le biais → incohérence critique.",
+    "B5 - Géopolitique : Quel est le contexte géopolitique actuel ? → Identifier si cela soutient ou affaiblit une devise. ⚠️ Ignorer ce facteur = vision incomplète.",
+    "B6 - Corrélations : Y a-t-il des corrélations fortes avec d'autres marchés (indices, matières premières, autres devises) ? → Exemple : USD / Or / Indices / pétrole… ⚠️ Si corrélations ignorées → analyse partielle.",
+    "B7 - Événement à venir ? → Identifier les news importantes (high impact). ⚠️ Si événement imminent non pris en compte → erreur de gestion.",
+    "🔎 Conclusion partielle : Rédigez une conclusion incluant la devise soutenue by la macroéconomie,le différentiel de taux sur le long terme et la géopolitique. → Une seule devise doit ressortir clairement dominante. ⚠️ Si conclusion neutre ou hésitante → pas de direction exploitable → trade interdit. → Il serait jusdicieux que la géopolitique valide le contexte macro. ⚠️ Si contradiction entre macro et contexte globale du marché → signal faible → prudence ou abstention.",
+    "D1 - Structure : Quelle est la tendance sur l’unité de temps supérieure ? Y a-t-il un range ? → Doit être clairement définie (pas d’ambiguïté). ⚠️ Pas de structure claire = pas de trade.",
+    "D2 - Momentum : Les bougies montrent-elles de la force (impulsion) ou de l’hésitation ? → Justifier avec comportement du prix. ⚠️ Momentum faible = entrée risquée.",
+    "D3 - Zones institutionnelles & Zones clés : Sommes-nous dans un Order Block ou un Fair Value Gap ? Y a-t-il un support et une résistance ? → La zone doit être identifiée ET cohérente avec le biais. ⚠️ Zone mal définie = SL fragile.",
+    "D4 - Liquidité : Le marché a-t-il déjà “nettoyé” les sommets/bas précédents avant mon entrée ? → Réponse claire : Oui / Non + justification. ⚠️ Si non → risque de sweep contre ta position.",
+    "E1 - Pourquoi j’entre maintenant ? → Timing précis (pas de réponse vague). ⚠️ “Parce que ça monte” = invalide.",
+    "E2 - Où est mon stop loss de sécurité ? → Doit correspondre à une invalidation logique du scénario. ⚠️ SL arbitraire = erreur critique. (Remplir la case à côté de l'actif)",
+    "E3 - Quel est mon ratio Risque/Récompense (RR) ? (Minimum 1:2 conseillé.) → Calcul réel obligatoire. ⚠️ RR < 1:2 = trade refusé automatiquement. (Remplir la case à côté de l'actif)",
+    "E4 - Confirmation ? (oui/non) → Basée sur structure + liquidité + timing. ⚠️ Si NON → trade non validé."
+  ];
+  
+  // --- CALCUL AUTOMATIQUE DU RR EN TEMPS RÉEL ---
+  useEffect(() => {
+    const entry = parseFloat(entryPrice);
+    const sl = parseFloat(stopLoss);
+    const tp = parseFloat(takeProfit);
+
+    if (entry && sl && tp && entry !== sl) {
+      const risk = Math.abs(entry - sl);
+      const reward = Math.abs(tp - entry);
+      const rrRatio = reward / risk;
+      setCalculatedRR(parseFloat(rrRatio.toFixed(1)));
+    } else {
+      setCalculatedRR(null);
+    }
+  }, [entryPrice, stopLoss, takeProfit]);
+
+  // --- ARBITRAGE ET RÉINJECTION SUPABASE DIRECTE VIA CACHE DE ROUTAGE ---
+  useEffect(() => {
+    const checkRestaurationSupabase = async () => {
+      // Extraction du ticket de l'historique
+      const hash = localStorage.getItem("tm_swing_cache") || sessionStorage.getItem("swing_restore");
+      if (hash) {
+        try {
+          const target = JSON.parse(hash);
+          if (target.trade_id) {
+            setIaFeedback(`> SYSTÈME: Interpellation directe de la base SQL Supabase pour le dossier #TM-${target.trade_id}...`);
+            
+            const res = await fetch(`http://127.0.0.1:8000/historique/get/${target.trade_id}`);
+            if (res.ok) {
+              const fullTrade = await res.json();
+              
+              // Injection synchronisée de tous les attributs de la base de données
+              setCurrentTradeId(fullTrade.id);
+              setActif(fullTrade.actif || "");
+              setAnalyse((fullTrade.analyse || "").replace("[PLAN AVANT-TRADE] : ", ""));
+              setMode(fullTrade.mode || "Étudiant");
+              setConviction(fullTrade.conviction || 50);
+              setPosition(fullTrade.position || "Neutre");
+              setStatut(fullTrade.statut || "Brouillon");
+              setEntryPrice(fullTrade.entry_price || "");
+              setStopLoss(fullTrade.stop_loss || "");
+              setTakeProfit(fullTrade.take_profit || "");
+              if (fullTrade.feedback) setIaFeedback(fullTrade.feedback);
+              
+              setIaFeedback(prev => `✅ SYNAPSE COMPLÈTE: Données rechargées depuis le Cloud.\n` + prev);
+              
+              // Nettoyage des déclencheurs pour sceller la session active
+              localStorage.removeItem("tm_swing_cache");
+              sessionStorage.removeItem("swing_restore");
+              return; // Coupe pour éviter d'écraser avec le cache v2 local
+            }
+          }
+        } catch (err) {
+          console.error("Échec du pont de réinjection Supabase:", err);
+        }
+      }
+
+      // Fallback historique local si aucune demande cloud n'est interceptée
+      const saved = localStorage.getItem("tm_swing_cache_v2");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setCurrentTradeId(parsed.currentTradeId || null);
+          setActif(parsed.actif || "");
+          setAnalyse(parsed.analyse || "");
+          setMode(parsed.mode || "Étudiant");
+          setConviction(parsed.conviction || 50);
+          setPosition(parsed.position || "Neutre");
+          setStatut(parsed.statut || "Brouillon");
+          setEntryPrice(parsed.entryPrice || "");
+          setStopLoss(parsed.stopLoss || "");
+          setTakeProfit(parsed.takeProfit || "");
+          if (parsed.feedback) setIaFeedback(parsed.feedback);
+          if (parsed.currentStep !== undefined) setCurrentStep(parsed.currentStep);
+          if (parsed.isSuiviActive !== undefined) setIsSuiviActive(parsed.isSuiviActive);
+          if (parsed.guardianHistory) setGuardianHistory(parsed.guardianHistory);
+        } catch (e) { console.error("Erreur cache:", e); }
+      }
+    };
+
+    checkRestaurationSupabase();
+  }, []);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const cache = { 
+        currentTradeId, actif, analyse, mode, conviction, position, statut, 
+        currentStep, isSuiviActive, feedback: iaFeedback,
+        entryPrice, stopLoss, takeProfit, guardianHistory
+      };
+      localStorage.setItem("tm_swing_cache_v2", JSON.stringify(cache));
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [currentTradeId, actif, analyse, mode, conviction, position, statut, currentStep, isSuiviActive, iaFeedback, entryPrice, stopLoss, takeProfit, guardianHistory]);
+
+  // --- MODAL CALCULATEUR ---
+  const [showCalc, setShowCalc] = useState(false);
+  const [calcData, setCalcData] = useState({ balance: "1000", risk: "1", pips: "50" });
+  const [lotResult, setLotResult] = useState<number | null>(null);
+
+  const calculatePositionSize = () => {
+    const bal = parseFloat(calcData.balance);
+    const riskPct = parseFloat(calcData.risk) / 100;
+    const pips = parseFloat(calcData.pips);
+    if (bal && riskPct && pips) {
+      const size = (bal * riskPct) / (pips * 10);
+      setLotResult(parseFloat(size.toFixed(2)));
+    }
+  };
+
+  // --- DISPATCHER DU CHAT DÉDIÉ AU SÉCURISATEUR SENSORIEL (GUARDIAN) ---
+  const handleGuardianMessageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guardianInput.trim() || isGuardianLoading) return;
+
+    const userMsg = guardianInput.trim();
+    setGuardianInput("");
+    setGuardianHistory(prev => [...prev, `Trader: ${userMsg}`]);
+    setIsGuardianLoading(true);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/analyse/guardian", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMsg,
+          analyse_complete: analyse || "Aucune thèse rédigée pour le moment.",
+          actif: actif
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGuardianHistory(prev => [...prev, `Guardian: ${data.verdict}`]);
+      } else {
+        setGuardianHistory(prev => [...prev, "Guardian: ❌ Synapse déconnectée du canal d'émotion."]);
+      }
+    } catch (err) {
+      setGuardianHistory(prev => [...prev, "Guardian: ❌ Erreur réseau. Le moteur de discipline n'est pas joignable."]);
+    } finally {
+      setIsGuardianLoading(false);
+    }
+  };
+
+  // --- HANDLERS CONTROLES ---
+  const handleAnalyse = async () => {
+    if (!analyse || !actif) {
+      setIaFeedback("> ERREUR: L'actif et le texte de l'analyse sont requis.");
+      return;
+    }
+    if (calculatedRR !== null && calculatedRR < 2) {
+      setIaFeedback("> BLOCAGE GESTION DU RISQUE: Le ratio RR calculé est inférieur à 1:2. Trade rejeté d'office par le système.");
+      return;
+    }
+    if (conviction < 50) {
+      setIaFeedback("> BLOCAGE PSYCHOLOGIQUE: Une conviction inférieure à 50% dénote un manque de clarté. Exécution interdite.");
+      return;
+    }
+
+    setIsLoading(true);
+    setConsoleTab("ARCHITECTE"); // Forcer le focus visuel sur l'audit technique
+    try {
+      const res = await fetch("http://127.0.0.1:8000/analyse/swing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          actif, 
+          analyse, 
+          conviction, 
+          position, 
+          statut, 
+          mode, 
+          step: currentStep, 
+          type: "SWING",
+          entry_price: entryPrice,
+          stop_loss: stopLoss,
+          take_profit: takeProfit,
+          calculated_rr: calculatedRR
+        })
+      });
+      const data = await res.json();
+      
+      if (mode === "Suivi IA") {
+        if (data.validated || data.status === "success") {
+          setIaFeedback(`> MENTOR_IA: Validation validée sur l'analyse de l'étape.\n${data.feedback || data.verdict}`);
+          setCurrentStep(prev => prev + 1);
+          setAnalyse(""); 
+        } else {
+          setIaFeedback(`> MENTOR_IA: RÉVISION STRATÉGIQUE REQUISE sur l'étape ${currentStep + 1}.\n${data.feedback || data.verdict}`);
+        }
+      } else {
+        setIaFeedback(`> MENTOR_IA: ${data.feedback || data.verdict}`);
+      }
+    } catch (e) {
+      setIaFeedback("> ERREUR: Synapse de communication Python déconnectée.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!actif || !analyse) {
+      setIaFeedback("> ERREUR: Impossible d'archiver un canevas vide.");
+      return;
+    }
+    setIaFeedback("> SYSTÈME: Injection SQL en cours...");
+    try {
+      const res = await fetch("http://127.0.0.1:8000/database/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          id: currentTradeId, // Passage de l'ID s'il s'agit d'un brouillon existant
+          actif, 
+          analyse, 
+          conviction, 
+          position, 
+          statut, 
+          mode, 
+          type: "SWING",
+          entry_price: entryPrice,
+          stop_loss: stopLoss,
+          take_profit: takeProfit,
+          calculated_rr: calculatedRR
+        })
+      });
+      const resData = await res.json();
+      if (res.ok) {
+        if (resData.trade_id) setCurrentTradeId(resData.trade_id);
+        setIaFeedback("> SYSTÈME: Analyse archivée avec succès dans l'historique Supabase.");
+      } else {
+        setIaFeedback("> ERREUR: Rejet de l'écriture par Supabase.");
+      }
+    } catch (e) {
+      setIaFeedback("> ERREUR: Connexion au pont d'archivage impossible.");
+    }
+  };
+
+  const handleReset = () => {
+    if(confirm("Écarter le protocole en cours et purger la mémoire de travail ?")) {
+        setAnalyse(""); setActif(""); setEntryPrice(""); setStopLoss(""); setTakeProfit(""); setCurrentStep(0);
+        setIsSuiviActive(false); setGuardianHistory([]); setIaFeedback("> SYSTÈME: Cache vidé."); setCurrentTradeId(null);
+        localStorage.removeItem("tm_swing_cache_v2");
+    }
+  };
+
+  return (
+    <AuroraBackground>
+      <div className="relative z-10 w-full h-screen flex flex-col p-4 overflow-hidden bg-zinc-950/50 backdrop-blur-[2px]">
+        
+        {/* MODAL CALCULATEUR DE RISQUE */}
+        {showCalc && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-[420px] bg-[#0F1117] border border-blue-500/30 rounded-[32px] p-8 shadow-2xl">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <Calculator className="text-blue-400" size={24} />
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white font-sans">Risk Calculator</h3>
+                </div>
+                <button onClick={() => setShowCalc(false)} className="p-2 text-zinc-500 hover:text-white transition-all"><X size={20} /></button>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-2 font-sans text-left">
+                   <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Capital Total ($)</label>
+                   <input type="number" value={calcData.balance} onChange={(e) => setCalcData({...calcData, balance: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 text-white text-lg font-mono outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="10000" />
+                </div>
+                <div className="grid grid-cols-2 gap-4 font-sans text-left">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Risque (%)</label>
+                    <input type="number" value={calcData.risk} onChange={(e) => setCalcData({...calcData, risk: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 text-white text-lg font-mono outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="1" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Invalidation (Pips)</label>
+                    <input type="number" value={calcData.pips} onChange={(e) => setCalcData({...calcData, pips: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 text-white text-lg font-mono outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="20" />
+                  </div>
+                </div>
+                <button onClick={calculatePositionSize} className="w-full py-5 bg-blue-600 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] text-white hover:bg-blue-500 active:scale-[0.98] transition-all shadow-lg shadow-blue-900/40 font-sans">Calculer le Volume</button>
+                <div className={`mt-4 p-6 rounded-3xl border transition-all duration-500 ${lotResult !== null ? 'bg-blue-500/10 border-blue-500/40 opacity-100' : 'bg-zinc-900/50 border-white/5 opacity-40'}`}>
+                  <div className="flex justify-between items-end font-sans">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Dimensionnement</p>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-tighter text-left">Taille de lot optimale</h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-4xl font-mono font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">{lotResult !== null ? lotResult : "0.00"}</span>
+                      <span className="ml-2 text-xs font-black text-blue-400 uppercase">Lots</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1. TOP HEADER NAVIGATION */}
+        <header className="h-14 flex items-center justify-between px-6 mb-3 bg-[#0F1117]/90 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl">
+          <Link href="/" className="text-zinc-400 hover:text-white flex items-center gap-2 transition-all group font-sans">
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-100">Trade Mind Hub</span>
+          </Link>
+
+          <div className="bg-black/50 p-1 rounded-xl border border-white/5 flex gap-1 w-[380px]">
+            {[
+              { id: "Étudiant", icon: <GraduationCap size={13} /> },
+              { id: "Expert", icon: <Zap size={13} /> },
+              { id: "Suivi IA", icon: <Activity size={13} /> }
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => { setMode(m.id); setIsSuiviActive(false); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all font-sans ${
+                  mode === m.id ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]" : "text-zinc-500 hover:bg-white/5"
+                }`}
+              >
+                {m.icon} {m.id}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/30">
+            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+            <span className="text-[9px] font-black text-blue-400 tracking-[0.2em] uppercase font-sans">MODE_{mode.toUpperCase().replace(" ", "_")}</span>
+          </div>
+        </header>
+
+        {/* 2. BARRE TECHNIQUE (DATA PRO HUB) */}
+        <section className="p-4 mb-3 bg-[#0F1117]/95 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 h-full w-[2px] bg-blue-500" />
+          
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-zinc-900 rounded-xl border border-white/5 text-blue-400"><LineChart size={16} /></div>
+            <div className="flex flex-col font-sans">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Actif [Forex Only]</span>
+              <input value={actif} onChange={(e) => setActif(e.target.value.toUpperCase())} placeholder="EURUSD" className="w-32 bg-transparent text-sm font-black text-blue-400 focus:outline-none placeholder:text-zinc-800 tracking-widest uppercase mt-0.5" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 border-l border-white/5 pl-6">
+            <div className="flex flex-col font-sans">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Prix d&apos;Entrée</span>
+              <input type="number" step="0.0001" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} placeholder="1.0850" className="w-24 bg-transparent text-sm font-mono font-bold text-white focus:outline-none mt-0.5" />
+            </div>
+
+            <div className="flex flex-col font-sans">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Stop Loss (SL)</span>
+              <input type="number" step="0.0001" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} placeholder="1.0800" className="w-24 bg-transparent text-sm font-mono font-bold text-red-400 focus:outline-none mt-0.5" />
+            </div>
+
+            <div className="flex flex-col font-sans">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Take Profit (TP)</span>
+              <input type="number" step="0.0001" value={takeProfit} onChange={(e) => setTakeProfit(e.target.value)} placeholder="1.0950" className="w-24 bg-transparent text-sm font-mono font-bold text-green-400 focus:outline-none mt-0.5" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 border-l border-white/5 pl-6 font-sans">
+            <div className="flex flex-col text-left">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Ratio Risque/Récompense</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`text-base font-mono font-black ${calculatedRR && calculatedRR >= 2 ? "text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.3)]" : "text-zinc-400"}`}>
+                  {calculatedRR !== null ? `1:${calculatedRR}` : "N/A"}
+                </span>
+                {calculatedRR !== null && calculatedRR < 2 && (
+                  <span className="text-[8px] px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded font-black uppercase tracking-tighter flex items-center gap-1"><Lock size={10}/> Invalide (&lt;1:2)</span>
+                )}
+                {calculatedRR !== null && calculatedRR >= 2 && (
+                  <span className="text-[8px] px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded font-black uppercase tracking-tighter">Validé</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col flex-1 max-w-[200px] border-l border-white/5 pl-6 font-sans">
+            <div className="flex justify-between text-[8px] font-black uppercase text-zinc-500 tracking-wider">
+              <span>Conviction</span>
+              <span className={`${conviction > 70 ? 'text-yellow-400' : conviction < 50 ? 'text-red-400' : 'text-blue-400'}`}>{conviction}%</span>
+            </div>
+            <input type="range" min="0" max="100" value={conviction} onChange={(e) => setConviction(parseInt(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-blue-600 mt-2" />
+          </div>
+          
+          <button onClick={() => setShowCalc(true)} className="p-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl transition-all"><Calculator size={16} /></button>
+        </section>
+
+        {/* 3. BLOC CENTRAL DE TRAVAIL */}
+        <div className="flex h-[45%] gap-4 mb-3 min-h-0">
+          
+          {/* GAUCHE : PROTOCOLE GUIDELINE */}
+          <div className="flex-[0.9] flex flex-col bg-[#0F1117] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="p-2 px-4 border-b border-white/10 flex items-center justify-between bg-zinc-900/40 font-sans">
+              <div className="flex items-center gap-2">
+                <Target size={13} className="text-blue-400" />
+                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Protocol_Validation_Rules</span>
+              </div>
+            </div>
+            
+            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar text-zinc-300 text-[11px] font-mono leading-relaxed bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.03),transparent)]">
+              {mode === "Étudiant" && (
+                <div className="space-y-8 animate-in fade-in duration-300">
+                  <section className="relative pl-5 border-l-2 border-blue-500/50 font-sans">
+                    <h4 className="text-base font-black bg-gradient-to-r from-blue-400 to-white bg-clip-text text-transparent mb-4 italic uppercase">A - IDENTITÉ & CONVICTION</h4>
+                    <div className="text-zinc-500 text-[10px] uppercase tracking-tighter mb-4 font-sans font-bold">(À inscrire également dans la case avec l'inscription "Actif" — cohérence obligatoire)</div>
+                    <div className="space-y-4 text-zinc-400 text-[11px]">
+                      <div><span className="text-blue-400 font-bold">1 - Actif analysé :</span><br/>→ L’actif doit être clairement défini (paire précise).<br/>→ ⚠️ Interdiction d’analyser plusieurs actifs simultanément.</div>
+                      <div><span className="text-blue-400 font-bold">2 - Biais (Long / Short / Aucun) et score de conviction ?</span><br/>→ Le biais doit être UNIQUE (pas de neutralité floue).<br/>→ Le score de conviction doit être justifié par au moins 2 elements concrets (macro + technique).<br/>→ ⚠️ Si conviction &gt; 70% sans justification solide → biais psychologique (excès de confiance).<br/>→ ⚠️ Si conviction &lt; 50% → absence de clarté → trade interdit.</div>
+                    </div>
+                  </section>
+
+                  <section className="relative pl-5 border-l-2 border-zinc-800 font-sans">
+                    <h4 className="text-base font-black text-zinc-200 mb-4 italic uppercase">B - ANALYSE MACRO & CONTEXTE GLOBALE</h4>
+                    <div className="space-y-4 text-zinc-400 text-[11px]">
+                      <div><span className="text-zinc-200 font-bold">1 - Quel est le sentiment global(Risk-on (appétit) ou Risk-off (peur)) et le contexte actuel sur le marché(selon la paire analysée, qu’observe-t-on actuellement sur le marché forex ?)</span><HelpTooltip conceptKey="Sentiment" onOpenVideo={setPlayingVideoUrl}/><br/>→ Justification obligatoire basée sur des éléments concrets (indices, flux, news).<br/>→ Décrire un contexte clair (tendance, incertitude, compression…).<br/>→ ⚠️ Réponse vague ou sans justification = analyse invalide.</div>
+                      <div><span className="text-zinc-200 font-bold">2 - Rendements (Yields) : Que fait le rendement de référence (ex: US02Y/GB10Y/...) ?</span><HelpTooltip conceptKey="Rendements" onOpenVideo={setPlayingVideoUrl}/><br/>→ Direction claire : hausse / baisse / stagnation.<br/>→ Impact direct sur la devise analysée.<br/>→ ⚠️ Si non relié à ton biais → incohérence macro.</div>
+                      <div><span className="text-zinc-200 font-bold">3 - Différentiel de taux : Quelle devise a le taux d’intérêt et la politique monétaire les plus attractifs ? Justifiez votre réponse.</span><HelpTooltip conceptKey="Taux" onOpenVideo={setPlayingVideoUrl}/><br/>→ Comparaison OBLIGATOIRE entre les deux devises de la paire.<br/>→ ⚠️ Si aucune dominance claire → biais fragile.</div>
+                      <div><span className="text-zinc-200 font-bold">4 - Inflation & Emploi : Selon les dernières news, quelle économie est la plus forte ? Justifiez votre réponse.</span><HelpTooltip conceptKey="Inflation" onOpenVideo={setPlayingVideoUrl}/><br/>→ Basé uniquement sur données récentes (pas d’hypothèse).<br/>→ ⚠️ Si contradiction avec le biais → incohérence critique.</div>
+                      <div><span className="text-zinc-200 font-bold">5 - Géopolitique : Quel est le contexte géopolitique actuel ?</span><HelpTooltip conceptKey="Geopolitique" onOpenVideo={setPlayingVideoUrl}/><br/>→ Identifier si cela soutient ou affaiblit une devise.<br/>→ ⚠️ Ignorer ce facteur = vision incomplète.</div>
+                      <div><span className="text-zinc-200 font-bold">6 - Corrélations : Y a-t-il des corrélations fortes avec d'autres marchés (indices, matières premières, autres devises) ?</span><br/>→ Exemple : USD / Or / Indices / pétrole…<br/>→ ⚠️ Si corrélations ignorées → analyse partielle.</div>
+                      <div><span className="text-zinc-200 font-bold">7 - Événement à venir ?</span><br/>→ Identifier les news importantes (high impact).<br/>→ ⚠️ Si événement imminent non pris en compte → erreur de gestion.</div>
+                    </div>
+                    
+                    <div className="mt-4 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+                      <div className="text-blue-400 font-black italic text-[10px] mb-2">🔎 Conclusion partielle</div>
+                      <div className="text-[10px] text-zinc-400 leading-relaxed space-y-2">
+                        <p>Rédigez une conclusion incluant la devise soutenue par la macroéconomie,le différentiel de taux sur le long terme et la géopolitique.</p>
+                        <p>→ Une seule devise doit ressortir clairement dominante.<br/>→ ⚠️ Si conclusion neutre ou hésitante → pas de direction exploitable → trade interdit.</p>
+                        <p>→ Il serait jusdicieux que la géopolitique valide le contexte macro.<br/>→ ⚠️ Si contradiction entre macro et contexte globale du marché → signal faible → prudence ou abstention.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="relative pl-5 border-l-2 border-zinc-800 font-sans">
+                    <h4 className="text-base font-black text-zinc-200 mb-4 italic uppercase">D - ANALYSE TECHNIQUE</h4>
+                    <div className="space-y-4 text-zinc-400 text-[11px]">
+                      <div><span className="text-zinc-200 font-bold">1 - Structure : Quelle est la tendance sur l’unité de temps supérieure ? Y a-t-il un range ?</span><HelpTooltip conceptKey="Tendance" onOpenVideo={setPlayingVideoUrl}/><br/>→ Doit être clairement définie (pas d’ambiguïté).<br/>→ ⚠️ Pas de structure claire = pas de trade.</div>
+                      <div><span className="text-zinc-200 font-bold">2 - Momentum : Les bougies montrent-elles de la force (impulsion) ou de l’hésitation ?</span><br/>→ Justifier avec comportement du prix.<br/>→ ⚠️ Momentum faible = entrée risquée.</div>
+                      <div><span className="text-zinc-200 font-bold">3 - Zones institutionnelles & Zones clés : Sommes-nous dans un Order Block ou un Fair Value Gap ? Y a-t-il un support et une résistance ?</span><HelpTooltip conceptKey="OB" onOpenVideo={setPlayingVideoUrl}/><HelpTooltip conceptKey="FVG" onOpenVideo={setPlayingVideoUrl}/><br/>→ La zone doit être identifiée ET cohérente avec le biais.<br/>→ ⚠️ Zone mal définie = SL fragile.</div>
+                      <div><span className="text-zinc-200 font-bold">4 - Liquidité : Le marché a-t-il déjà “nettoyé” les sommets/bas précédents avant mon entrée ?</span><HelpTooltip conceptKey="Liquidity" onOpenVideo={setPlayingVideoUrl}/><br/>→ Réponse claire : Oui / Non + justification.<br/>→ ⚠️ Si non → risque de sweep contre ta position.</div>
+                    </div>
+                  </section>
+
+                  <section className="relative pl-5 border-l-2 border-zinc-800 font-sans">
+                    <h4 className="text-base font-black text-zinc-200 mb-4 italic uppercase">E - GESTION DU RISQUE</h4>
+                    <div className="space-y-4 text-zinc-400 text-[11px]">
+                      <div><span className="text-zinc-200 font-bold">1 - Pourquoi j’entre maintenant ?</span><br/>→ Timing précis (pas de réponse vague).<br/>→ ⚠️ “Parce que ça monte” = invalide.</div>
+                      <div><span className="text-zinc-200 font-bold">2 - Où est mon stop loss de sécurité ?</span><br/>→ Doit correspondre à une invalidation logique du scénario.<br/>→ ⚠️ SL arbitraire = erreur critique.<br/><span className="text-zinc-500 text-[10px]">(Remplir la case à côté de l'actif)</span></div>
+                      <div><span className="text-zinc-200 font-bold">3 - Quel est mon ratio Risque/Récompense (RR) ? (Minimum 1:2 conseillé.)</span><br/>→ Calcul réel obligatoire.<br/>→ ⚠️ RR &lt; 1:2 = trade refusé automatiquement.<br/><span className="text-zinc-500 text-[10px]">(Remplir la case à côté de l'actif)</span></div>
+                      <div><span className="text-zinc-200 font-bold">4 - Confirmation ? (oui/non)</span><br/>→ Basée sur structure + liquidité + timing.<br/>→ ⚠️ Si NON → trade non validé.</div>
+                    </div>
+                  </section>
+
+                  <section className="relative pl-5 border-l-2 border-zinc-800 font-sans">
+                    <h4 className="text-base font-black text-zinc-200 mb-2 italic uppercase">F - RÉSUMÉ & DÉCISION</h4>
+                    <div className="text-zinc-500 font-bold italic mb-6">“Si toutes les cases ne sont pas cochées, je reste observateur.”</div>
+                    <div className="p-6 bg-blue-600/10 border-2 border-blue-500/30 rounded-[32px] space-y-4">
+                      <div className="text-white font-black text-xs flex items-center gap-2 uppercase tracking-widest"><ShieldAlert size={16} className="text-blue-400" /> 🎯 DÉCISION FINALE (NON NÉGOCIABLE)</div>
+                      <div className="space-y-3 text-[10px] font-black uppercase tracking-wider">
+                        <div className="text-green-400">TOUTES les conditions validées → TRADE AUTORISÉ</div>
+                        <div className="text-yellow-400">1 incohérence → TRADE À AJUSTER</div>
+                        <div className="text-red-500">Plusieurs incohérences → TRADE REFUSÉ</div>
+                      </div>
+                      <div className="text-zinc-500 text-[9px] font-bold mt-4 border-t border-white/5 pt-4 italic uppercase">⚠️ RÈGLE FINALE: Un trade n’est pas validé parce qu’il “semble bon”, mais parce qu’il respecte un cadre strict.</div>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {mode === "Expert" && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300 font-sans">
+                  <div className="relative pl-5 border-l-2 border-blue-500/50">
+                    <h4 className="text-base font-black text-blue-400 tracking-wider mb-6 uppercase">🔥 MODE EXPERT (QUICK CHECK)</h4>
+                    <div className="space-y-6 text-zinc-300 text-[11px] font-mono leading-relaxed">
+                      <div>
+                        <span className="text-blue-400 font-bold">1. YIELDS (Macro Flow)</span><br/>
+                        → Les rendements confirment -t-il ton biais directionnel ?<br/>
+                        <span className="text-zinc-500 text-[10px] uppercase font-bold">Aligné? Neutre? Contradictoire?</span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400 font-bold">2. LIQUIDITÉ (Market Intent)</span><br/>
+                        → Un sweep de liquidité clair a-t-il été effectué avant ton entrée ?<br/>
+                        <span className="text-zinc-500 text-[10px] uppercase font-bold">Oui? Non?</span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400 font-bold">3. STRUCTURE (Market Structure)</span><br/>
+                        → As-tu une confirmation structurelle valide (BOS ou ChoCh) ?<br/>
+                        <span className="text-zinc-500 text-[10px] uppercase font-bold">BOS? ChoCh? Aucune?</span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400 font-bold">4. ZONE (Execution Precision)</span><br/>
+                        → Ton entrée est-elle basée sur une zone institutionnelle claire ?<br/>
+                        <span className="text-zinc-500 text-[10px] uppercase font-bold">FVG? Order Block? Autre? Aucune?</span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400 font-bold">5. RISK MANAGEMENT (Survie)</span><br/>
+                        → Ton Risk/Reward est-il ≥ 1:2 ?<br/>
+                        <span className="text-zinc-500 text-[10px] uppercase font-bold">Oui? Non?</span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400 font-bold">6. DISCIPLINE</span><br/>
+                        → Respectes-tu STRICTEMENT ton plan sans ajustement émotionnel ?<br/>
+                        <span className="text-zinc-500 text-[10px] uppercase font-bold">Oui? Non?</span>
+                      </div>
+                    </div>
+
+                    <div className="p-6 bg-zinc-900/40 border-2 border-white/5 rounded-[32px] space-y-4">
+                      <div className="text-white font-black text-xs flex items-center gap-2 uppercase"><ShieldCheck size={20} className="text-blue-400" /> 🎯 DÉCISION FINALE (NON NÉGOCIABLE)</div>
+                      <div className="space-y-3 text-[10px] font-black uppercase tracking-widest">
+                        <div className="text-green-400">TOUTES les conditions validées → TRADE AUTORISÉ</div>
+                        <div className="text-yellow-400">1 incohérence → TRADE À AJUSTER</div>
+                        <div className="text-red-500">Plusieurs incohérences → TRADE REFUSÉ</div>
+                      </div>
+                      <div className="text-zinc-500 text-[9px] font-bold mt-4 border-t border-white/5 pt-4 italic">⚠️ RÈGLE FINALE: Un trade n’est pas validé parce qu’il “semble bon”, mais parce qu’il respecte un cadre strict.</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {mode === "Suivi IA" && (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-blue-500/[0.01] rounded-2xl border border-blue-500/10 font-sans">
+                  {!isSuiviActive ? (
+                    <div className="space-y-4">
+                      <BrainCircuit size={24} className="text-blue-400 mx-auto animate-pulse" />
+                      <h4 className="text-sm font-black text-white uppercase tracking-wider">Initialiser_L_Audit_Séquentiel</h4>
+                      <button onClick={() => setIsSuiviActive(true)} className="px-6 py-3 bg-blue-600 rounded-xl font-black text-[9px] uppercase tracking-wider text-white shadow-lg flex items-center gap-2 mx-auto transition-transform active:scale-95"><Flame size={12}/> Activer IA Analyste</button>
+                    </div>
+                  ) : (
+                    <div className="w-full text-left space-y-4 animate-in slide-in-from-bottom-4">
+                      <div className="p-5 bg-black/50 border border-blue-500/20 rounded-2xl relative overflow-hidden">
+                        <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest block mb-2">Étape Analytique Active</span>
+                        <div className="text-xs text-white font-bold italic leading-relaxed font-sans">{questionsSuivi[currentStep] || "Audit Terminé."}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-zinc-500 text-[8px] font-black uppercase"><span>Progression du protocole</span><span>{currentStep + 1} / {questionsSuivi.length}</span></div>
+                        <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-600 transition-all duration-500" style={{width: `${((currentStep + 1) / questionsSuivi.length) * 100}%`}} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* DROITE : TERMINAL NEURAL AUDIT STREAM */}
+          <div className="flex-1 flex flex-col bg-[#0F1117] border border-white/10 rounded-2xl p-4 gap-3 shadow-2xl relative overflow-hidden">
+            
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/5 w-full gap-0.5">
+                <button 
+                  onClick={() => setConsoleTab("ARCHITECTE")} 
+                  className={`flex-1 py-1.5 rounded-md text-[8px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${consoleTab === "ARCHITECTE" ? "bg-blue-600/20 border border-blue-500/30 text-blue-400" : "text-zinc-500"}`}
+                >
+                  <BrainCircuit size={10} /> Architect_Audit
+                </button>
+                <button 
+                  onClick={() => setConsoleTab("GUARDIAN")} 
+                  className={`flex-1 py-1.5 rounded-md text-[8px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${consoleTab === "GUARDIAN" ? "bg-purple-600/20 border border-purple-500/30 text-purple-400" : "text-zinc-500"}`}
+                >
+                  <MessageSquare size={10} /> Guardian_Chat
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden min-h-0">
+              {consoleTab === "GUARDIAN" ? (
+                <div className="h-full flex flex-col justify-between animate-in fade-in duration-200">
+                  
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 pb-2">
+                    {guardianHistory.length === 0 ? (
+                      <div className="text-zinc-500 text-[11px] font-sans font-light italic p-2 bg-purple-500/[0.02] border border-purple-500/5 rounded-xl text-left">
+                        &gt; MENTOR_IA: Mode Guardian (Discipline & Gestion Émotionnelle Swing) connecté. Formulez vos doutes ou inconforts à chaud pendant la rétention de votre position.
+                      </div>
+                    ) : (
+                      guardianHistory.map((line, idx) => {
+                        const isUser = line.startsWith("Trader:");
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`p-2.5 rounded-xl text-[11px] font-sans border leading-normal text-left ${
+                              isUser 
+                                ? "bg-zinc-900/50 border-white/5 text-zinc-300 ml-4" 
+                                : "bg-purple-500/5 border-purple-500/10 text-purple-300 mr-4"
+                            }`}
+                          >
+                            <span className="text-[8px] font-black uppercase block mb-1 tracking-wider opacity-40 font-sans">
+                              {isUser ? "⚡ SWING_TRADER" : "🛡️ GUARDIAN_ENGINE"}
+                            </span>
+                            {line.replace("Trader: ", "").replace("Guardian: ", "")}
+                          </div>
+                        );
+                      })
+                    )}
+                    {isGuardianLoading && (
+                      <div className="text-[10px] text-purple-400 font-sans animate-pulse flex items-center gap-1.5 pl-1 text-left">
+                        <Activity size={10} className="animate-spin" /> Ingestion des métriques psychologiques...
+                      </div>
+                    )}
+                  </div>
+
+                  <form onSubmit={handleGuardianMessageSubmit} className="mt-2 flex gap-1 border-t border-white/5 pt-2">
+                    <input 
+                      type="text"
+                      value={guardianInput}
+                      onChange={(e) => setGuardianInput(e.target.value)}
+                      placeholder="Inconfort, envie de couper tôt, doute..."
+                      className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-3 text-xs text-zinc-200 outline-none focus:border-purple-500/50 font-sans"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={isGuardianLoading || !guardianInput.trim()}
+                      className="w-8 h-8 bg-purple-600 hover:bg-purple-500 disabled:opacity-20 text-white rounded-xl flex items-center justify-center transition-all shrink-0"
+                    >
+                      <Send size={12} />
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="h-full bg-black/70 border border-white/10 rounded-xl p-4 font-mono text-[11px] text-green-400 overflow-y-auto leading-relaxed border-l-2 border-l-blue-500 shadow-inner text-left">
+                  <div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1.5 uppercase text-[8px] font-black text-blue-400/50 font-sans">
+                    <div className="flex items-center gap-1.5"><Activity size={10} className="animate-pulse" /> Neural_Audit_Stream</div>
+                    <div className="flex gap-0.5">
+                      <div className="w-1 h-1 rounded-full bg-blue-500/50 animate-pulse" />
+                      <div className="w-1 h-1 rounded-full bg-blue-500/50 animate-pulse [animation-delay:0.2s]" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    {iaFeedback.split('\n').map((line, i) => (
+                      <div key={i} className={line.startsWith('>') ? 'text-blue-400 font-sans font-black tracking-tight' : 'text-zinc-300 font-sans text-[11px]'}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 font-sans">
+              <div className="flex gap-1">
+                <button onClick={handleReset} title="Reset Work" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"><RotateCcw size={15} /></button>
+                <button onClick={handleSave} title="Archiver SQL" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"><Save size={15} /></button>
+              </div>
+              <button onClick={handleAnalyse} disabled={isLoading || (mode === "Suivi IA" && !isSuiviActive)} className="flex-1 h-10 bg-blue-600 hover:bg-blue-500 disabled:opacity-20 text-white rounded-xl flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-[0.2em] transition-all shadow-md active:scale-95">
+                {mode === "Suivi IA" ? <><Send size={14} /> Valider_L_Étape</> : <><BrainCircuit size={15} /> Lancer_L_Audit</>}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. WORKSPACE DE RÉDACTION SÉMANTIQUE */}
+        <section className="flex-1 flex flex-col bg-[#0F1117] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl relative">
+          <div className="px-8 py-3 border-b border-white/10 flex justify-between items-center bg-zinc-900/40 font-sans">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,1)]" />
+              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.4em]">Neural_Workspace_v5.2</span>
+            </div>
+            <span className="text-[8px] font-black text-blue-400/40 uppercase tracking-widest">[ Saisie Sémantique Obligatoire ]</span>
+          </div>
+          <textarea 
+            value={analyse} 
+            onChange={(e) => setAnalyse(e.target.value)} 
+            className="flex-1 p-8 bg-transparent text-zinc-200 text-[12px] font-light leading-relaxed resize-none focus:outline-none custom-scrollbar font-sans" 
+            placeholder={isSuiviActive ? `Formulez vos arguments pour l'étape : ${questionsSuivi[currentStep].split(' - ')[0]}...` : "Déployez ici votre démonstration macro-économique, l'analyse des rendements et la convergence technique H4/Daily de votre configuration Forex..."} 
+          />
+        </section>
+
+        {playingVideoUrl && (
+          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4 lg:p-12 backdrop-blur-xl" onClick={closeVideo}>
+            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-5xl aspect-video rounded-[32px] shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
+              <button onClick={closeVideo} className="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-all">
+                <X size={24} />
+              </button>
+              
+              <iframe
+                className="w-full h-full rounded-[24px]"
+                src={getEmbedUrl(playingVideoUrl)}
+                title="Vidéo explicative"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </AuroraBackground>
+  );
+}
