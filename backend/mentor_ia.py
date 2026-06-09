@@ -77,9 +77,6 @@ class MarketGuard:
         # Cache de 5 minutes pour éviter toute limitation inutile des sources gratuites
         self.cache_duration = 300 
 
-    def _est_valide(self, key):
-        """Vérifie si la donnée en cache est encore fraîche."""
-        return (time.time() - self.storage[key]["timestamp"]) < self.cache_duration
 
     def _est_valide(self, key):
         """Vérifie la fraîcheur de la donnée en cache"""
@@ -135,7 +132,6 @@ class MarketGuard:
         return self.storage["cnn_fear_greed"]["data"]
 
     # --- MODULE : POLYGON (Prix & Snapshot) ---
-    import yfinance as yf
 
     def get_market_snapshot(self, ticker):
         """
@@ -456,7 +452,7 @@ def get_news(actif="EURUSD", guard=None):
     if guard is None:
         # Pas besoin de clés API ici, MarketGuard les gère en interne
         # si nécessaire ou utilise les flux publics.
-        guard = MarketGuard(api_key=None)
+        guard = MarketGuard() 
     
     # 1. Données brutes (Forex Factory + CNN)
     events_critiques = guard.get_forex_factory_news(actif)
@@ -506,11 +502,8 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         """
 
     # 4. RÉCUPÉRATION DES DONNÉES (Via l'orchestrateur MarketGuard)
-    if not hasattr(app_instance, 'market_guard'):
-        # On n'a plus besoin de clé Polygon ici
-        app_instance.market_guard = MarketGuard(api_key=None)
     
-    guard = app_instance.market_guard
+    guard = MarketGuard()  # On peut créer une instance locale pour l'orchestrateur, pas besoin de la stocker dans app_instance
     
     # L'orchestrateur centralise tout : prix, ADR, news et sentiment
     market_context = guard.preparer_contexte_marche(actif)
@@ -1033,7 +1026,7 @@ def analyser_compagnon_live(app_instance, message_utilisateur, plan_initial_resu
     Utilise le PROMPT OFFICIEL - ZÉRO TOLÉRANCE SUR LA DÉCISION.
     """
     
-        # === LE PROMPT OFFICIEL (TRANSCRIPTION STRICTE) ===
+    # === LE PROMPT OFFICIEL (TRANSCRIPTION STRICTE) ===
     prompt_officiel = f"""
     🔒 PROMPT OFFICIEL — IA COMPAGNON (IA N°2)
     # 🔒 PROMPT OFFICIEL — IA COMPAGNON (IA N°2)
