@@ -173,25 +173,47 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
         risk_engine_data = current_metrics.get("risk_engine", {})
         is_locked = risk_engine_data.get("status") == "LOCKDOWN"
 
-        feedback_ia = "Analyse effectuée."
+        # Initialisation de la réponse
+        feedback_ia = ""
+        
         try:
+            # Appel vers mentor_ia
             if hasattr(mentor_ia, "lancer_analyse_api"):
-                resultat = mentor_ia.lancer_analyse_api(data.analyse, data.conviction, data.actif, {"ia_severite": "Strict" if is_locked else "Neutre"})
-                feedback_ia = resultat.get("verdict", feedback_ia)
+                resultat = mentor_ia.lancer_analyse_api(
+                    data.analyse, 
+                    data.conviction, 
+                    data.actif, 
+                    {"ia_severite": "Strict" if is_locked else "Neutre"}
+                )
+                feedback_ia = resultat.get("verdict", "")
             elif hasattr(mentor_ia, "lancer_analyse"):
-                resultat = mentor_ia.lancer_analyse(data.analyse, data.conviction, data.actif)
-                feedback_ia = resultat.get("verdict", feedback_ia)
+                resultat = mentor_ia.lancer_analyse(
+                    data.analyse, 
+                    data.conviction, 
+                    data.actif,
+                    {"ia_severite": "Strict" if is_locked else "Neutre"} # Ajouté pour cohérence
+                )
+                feedback_ia = resultat.get("verdict", "")
             
+            # Si après l'appel, feedback_ia est toujours vide, on lève une erreur explicite
+            if not feedback_ia:
+                raise Exception("L'IA n'a retourné aucune réponse (Vérifier clés OpenAI/Modèle).")
+
             # --- INJECTION NEWS PONT ---
             bridge = BridgeNewsInterface()
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
                 feedback_ia = f"{alerte}\n\n[ANALYSE IA]\n{feedback_ia}"
-            # ---------------------------
 
         except Exception as ie:
-            logging.error(f"⚠️ Erreur d'appel IA Mentor: {ie}")
+            logging.error(f"⚠️ Erreur détaillée IA Mentor: {ie}")
+            # On renvoie l'erreur réelle au frontend pour affichage immédiat
+            return {
+                "feedback": f"❌ Erreur IA : {str(ie)}", 
+                "engine_status": "ERROR"
+            }
 
+        # Sauvegarde en base de données
         trade_id = database.sauvegarder_trade_final(
             actif=data.actif, biais="Neutre", conviction=data.conviction, score_ia=0,      
             analyse=data.analyse, feedback=feedback_ia, statut=data.statut,
@@ -206,9 +228,9 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
             "engine_status": risk_engine_data.get("status", "SAFE")
         }
     except Exception as e:
-        logging.error(f"❌ Erreur Analyse : {e}")
+        logging.error(f"❌ Erreur Système Analyse : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur système Mind Engine: {str(e)}")
-
+    
 @app.post("/database/save")
 async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
     try:
@@ -221,16 +243,24 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
             "take_profit": data.take_profit, "calculated_rr": data.calculated_rr
         }
 
-        feedback_ia = "Analyse effectuée."
+        # Initialisation du feedback
+        feedback_ia = ""
+        
         try:
             if hasattr(mentor_ia, "lancer_analyse_api"):
                 resultat = mentor_ia.lancer_analyse_api(
-                    analyse=data.analyse, conviction=data.conviction, actif=data.actif, 
+                    analyse=data.analyse, 
+                    conviction=data.conviction, 
+                    actif=data.actif, 
                     user_settings={"ia_severite": "Strict" if is_locked else "Neutre"},
                     data_json=data_json 
                 )
-                feedback_ia = resultat.get("verdict", feedback_ia)
+                feedback_ia = resultat.get("verdict", "")
             
+            # Vérification de sécurité : si l'IA renvoie vide, on lève une erreur explicite
+            if not feedback_ia:
+                 raise Exception("L'IA n'a retourné aucune analyse. Vérifiez les logs.")
+
             # --- INJECTION NEWS PONT ---
             bridge = BridgeNewsInterface()
             alerte = bridge.get_live_alerts(data.actif, data.mode)
@@ -239,8 +269,10 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
             # ---------------------------
 
         except Exception as ie:
-            logging.error(f"⚠️ Erreur d'appel IA Mentor: {ie}")
+            logging.error(f"⚠️ Erreur détaillée IA Mentor (Save): {ie}")
+            return {"status": "error", "message": f"Erreur IA : {str(ie)}", "engine_status": "ERROR"}
 
+        # Sauvegarde en base de données
         trade_id = database.sauvegarder_trade_final(
             actif=data.actif, biais="Neutre", conviction=data.conviction, score_ia=0,      
             analyse=data.analyse, feedback=feedback_ia, statut=data.statut,
@@ -250,15 +282,18 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
         )
         
         if not trade_id:
-            raise HTTPException(status_code=500, detail="Erreur d'enregistrement cloud Supabase.")
+            raise Exception("Échec de l'enregistrement dans Supabase (Base de données).")
 
         return {
-            "status": "success", "trade_id": trade_id,
-            "feedback": feedback_ia, "engine_status": risk_engine_data.get("status", "SAFE")
+            "status": "success", 
+            "trade_id": trade_id,
+            "feedback": feedback_ia, 
+            "engine_status": risk_engine_data.get("status", "SAFE")
         }
+
     except Exception as e:
-        logging.error(f"❌ Erreur Sauvegarde Générique : {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur système : {str(e)}")
+        logging.error(f"❌ Erreur critique Sauvegarde Générique : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyse/guardian")
 async def route_guardian_live_chat(data: GuardianRequest, token: str = Depends(verifier_session_terminal)):
