@@ -154,7 +154,7 @@ export default function SwingAnalysis() {
           if (target.trade_id) {
             setIaFeedback(`> SYSTÈME: Interpellation directe de la base SQL Supabase pour le dossier #TM-${target.trade_id}...`);
             
-            const res = await fetch(`http://127.0.0.1:8000/historique/get/${target.trade_id}`);
+            const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${target.trade_id}`);
             if (res.ok) {
               const fullTrade = await res.json();
               
@@ -248,7 +248,7 @@ export default function SwingAnalysis() {
     setIsGuardianLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/analyse/guardian", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/analyse/guardian", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -289,7 +289,7 @@ export default function SwingAnalysis() {
     setIsLoading(true);
     setConsoleTab("ARCHITECTE"); // Forcer le focus visuel sur l'audit technique
     try {
-      const res = await fetch("http://127.0.0.1:8000/analyse/swing", {
+      const res = await fetch("https://trade-mind-w6rs.onrender.com/analyse/swing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -334,7 +334,7 @@ export default function SwingAnalysis() {
     }
     setIaFeedback("> SYSTÈME: Injection SQL en cours...");
     try {
-      const res = await fetch("http://127.0.0.1:8000/database/save", {
+      const res = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
