@@ -349,31 +349,38 @@ async def delete_trade(trade_id: int, token: str = Depends(verifier_session_term
 
 @app.get("/market/intelligence")
 async def route_market_intel(token: str = Depends(verifier_session_terminal)):
-    # Initialisation des données par défaut
-    response = {
-        "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
-        "news_feed": "Flux indisponible pour le moment."
-    }
+    debug_log = []
     
-    # 1. Récupération sécurisée du sentiment
-    try:
-        response["fear_greed"] = dashboard_engine.market_guard.get_sentiment_data()
-    except Exception as e:
-        logging.error(f"Erreur sentiment: {e}")
+    # Valeurs par défaut
+    resp = {
+        "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
+        "news_feed": "Initialisation..."
+    }
 
-    # 2. Récupération sécurisée des news (Isolée de l'IA/Mentor)
+    # 1. TEST SENTIMENT
     try:
-        # On utilise le Bridge directement ici pour l'affichage menu
-        # et on ne dépend plus de mentor_ia.get_news qui peut être couplé à OpenAI
+        resp["fear_greed"] = dashboard_engine.market_guard.get_sentiment_data()
+    except Exception as e:
+        debug_log.append(f"Erreur Sentiment: {str(e)}")
+
+    # 2. TEST NEWS (Le point critique)
+    try:
         bridge = BridgeNewsInterface()
+        # On force un print dans les logs Render pour voir si ça tourne
         news_raw = bridge.get_live_alerts("EURUSD", "SWING")
         if news_raw:
-            response["news_feed"] = news_raw
+            resp["news_feed"] = news_raw
+        else:
+            resp["news_feed"] = "Bridge vide (vérifier NewsAPI)"
     except Exception as e:
-        logging.error(f"Erreur news: {e}")
-        response["news_feed"] = "Flux news temporairement inaccessible."
+        debug_log.append(f"Erreur Bridge: {str(e)}")
+        resp["news_feed"] = f"Erreur Bridge : {str(e)}"
 
-    return response
+    # Si on a des erreurs, on les ajoute au flux pour les voir à l'écran
+    if debug_log:
+        resp["news_feed"] = f"DEBUG: {'; '.join(debug_log)} | {resp['news_feed']}"
+
+    return resp
 
 @app.post("/investor/audit")
 async def route_investor_audit(data: dict, premium: bool = Depends(verifier_acces_premium)):
