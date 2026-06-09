@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 # --- CHARGEMENT DU COFFRE-FORT .ENV ---
 load_dotenv()
+print(f"DEBUG: ARCHITECT_KEY trouvé ? {bool(os.getenv('OPENAI_ARCHITECT_KEY'))}, GUARDIAN_KEY trouvé ? {bool(os.getenv('OPENAI_GUARDIAN_KEY'))}")
 
 # --- CONFIGURATION SÉCURISÉE DES CLÉS API ---
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
