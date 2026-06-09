@@ -17,7 +17,7 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 
 export default function HistoriquePage() {
     const router = useRouter();
-    const { data, error, isLoading } = useSWR('http://127.0.0.1:8000/historique/all', fetcher, {
+    const { data, error, isLoading } = useSWR('https://trade-mind-w6rs.onrender.com/historique/all', fetcher, {
         refreshInterval: 3000,
         revalidateOnFocus: true
     });
@@ -36,9 +36,9 @@ export default function HistoriquePage() {
     const deleteTrade = async (id: number) => {
         if (!confirm("🚨 Supprimer définitivement cette exécution de la base SQL ?")) return;
         try {
-            const res = await fetch(`http://127.0.0.1:8000/historique/delete/${id}`, { method: 'DELETE' });
+            const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/delete/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                mutate('http://127.0.0.1:8000/historique/all'); 
+                mutate('https://trade-mind-w6rs.onrender.com/historique/all'); 
                 if (selectedTrade?.id === id) setSelectedTrade(null);
             }
         } catch (e) {
@@ -49,7 +49,7 @@ export default function HistoriquePage() {
     const reprendreAnalyse = async (trade: any) => {
         try {
             // 1. Récupération complète depuis le backend (Supabase)
-            const res = await fetch(`http://127.0.0.1:8000/historique/get/${trade.id}`);
+            const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${trade.id}`);
             if (!res.ok) throw new Error("Échec de récupération");
             const fullTrade = await res.json();
 
