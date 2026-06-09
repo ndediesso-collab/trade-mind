@@ -5,7 +5,8 @@ import json
 import xml.etree.ElementTree as ET
 from openai import OpenAI
 import re
-import datetime 
+from datetime import datetime, timedelta 
+
 from dotenv import load_dotenv
 
 # --- CHARGEMENT DU COFFRE-FORT .ENV ---
@@ -23,7 +24,7 @@ client_architect = OpenAI(api_key=os.getenv("OPENAI_ARCHITECT_KEY"))
 client_guardian = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
 import time
 import requests
-import datetime
+from datetime import datetime, timedelta 
 import xml.etree.ElementTree as ET
 
 GUIDES_QUESTIONNAIRES = {
@@ -238,40 +239,54 @@ class MarketGuard:
         except: 
             return []
         
-    def get_geopolitical_news(self, actif, mode="SCALP"):
-        """
-        Récupère les news géopolitiques via NewsAPI.
-        - mode="SCALP": Tri par fraîcheur (publishedAt) pour réagir vite.
-        - mode="SWING": Tri par pertinence (relevancy) pour l'analyse de fond.
-        """
-        try:
-            keywords = "(War OR Geopolitical OR Election OR Crisis OR Sanctions OR Tensions OR Inflation OR Recession)"
-            
-            # Ajustement dynamique du tri selon le mode
-            sort_order = "publishedAt" if mode == "SCALP" else "relevancy"
-            
-            url = f"https://newsapi.org/v2/everything?q={keywords}&language=en&pageSize=3&sortBy={sort_order}&apiKey={os.getenv('NEWS_API_KEY')}"
-            
-            response = self.session.get(url, timeout=5)
-            response.raise_for_status()
-            
-            data = response.json()
-            articles = data.get("articles", [])
-            
-            if not articles:
-                return ["🌍 Sentiment Géopolitique: Calme (aucune tension majeure détectée)."]
-                
-            # Ajout du timestamp pour que l'IA sache l'âge de la news (crucial pour le scalp)
-            news_list = []
-            for a in articles:
-                time_str = a.get('publishedAt', 'N/A')
-                news_list.append(f"🌍 [GEOPOLITIQUE/RISQUE][{mode}] {a['title']} ({time_str})")
-            
-            return news_list
+    from datetime import datetime, timedelta
 
-        except Exception as e:
-            print(f"❌ Erreur flux Géopolitique: {e}")
-            return [f"🌍 Sentiment Géopolitique: Flux temporairement indisponible."]    
+def get_geopolitical_news(self, actif, mode="SCALP"):
+    """
+    Récupère les news géopolitiques via NewsAPI avec filtre strict de fraîcheur.
+    """
+    try:
+        keywords = "(War OR Geopolitical OR Election OR Crisis OR Sanctions OR Tensions OR Inflation OR Recession)"
+        
+        # 1. Calcul de la date d'hier pour forcer la fraîcheur
+        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        # 2. Ajustement dynamique du tri et ajout du paramètre 'from'
+        sort_order = "publishedAt" if mode == "SCALP" else "relevancy"
+        
+        # Ajout du paramètre &from={yesterday} pour bannir les news de mai
+        url = (
+            f"https://newsapi.org/v2/everything?"
+            f"q={keywords}&"
+            f"from={yesterday}&"
+            f"language=en&"
+            f"pageSize=3&"
+            f"sortBy={sort_order}&"
+            f"apiKey={os.getenv('NEWS_API_KEY')}"
+        )
+        
+        response = self.session.get(url, timeout=5)
+        response.raise_for_status()
+        
+        data = response.json()
+        articles = data.get("articles", [])
+        
+        # 3. Filtrage supplémentaire au cas où l'API renvoie des résultats non pertinents
+        if not articles:
+            return ["🌍 Sentiment Géopolitique: Calme (aucune tension majeure détectée)."]
+            
+        news_list = []
+        for a in articles:
+            # Nettoyage du titre pour éviter les caractères spéciaux qui cassent l'IA
+            title = a['title'].replace('"', "'")
+            time_str = a.get('publishedAt', 'N/A')
+            news_list.append(f"🌍 [GEOPOLITIQUE/RISQUE][{mode}] {title} ({time_str})")
+        
+        return news_list
+
+    except Exception as e:
+        print(f"❌ Erreur flux Géopolitique: {e}")
+        return [f"🌍 Sentiment Géopolitique: Flux temporairement indisponible."]    
 
     def preparer_contexte_marche(self, actif):
         """

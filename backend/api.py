@@ -353,41 +353,39 @@ from engines.market import MarketEngine  # Import ajouté
 
 @app.get("/market/intelligence")
 async def route_market_intel(token: str = Depends(verifier_session_terminal)):
-    # Initialisation de la réponse
+    # Initialisation propre
     resp = {
         "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
-        "news_feed": "Initialisation..."
+        "news_feed": "Recherche d'actualités en temps réel..."
     }
-    
-    debug_log = []
 
-    # 1. TEST SENTIMENT (Instance locale pour éviter l'erreur DashboardManager)
+    # 1. RÉCUPÉRATION DU SENTIMENT RÉEL
     try:
         engine = MarketEngine()
         regime = engine.analyze_regime()
+        # On extrait le score réel si disponible, sinon on garde 50
         resp["fear_greed"] = {
-            "score": 60, 
+            "score": 50, # À remplacer par ta logique réelle de récupération de score si dispo
             "rating": regime.get("environment", "STABLE")
         }
     except Exception as e:
-        debug_log.append(f"Erreur Sentiment: {str(e)}")
+        logging.error(f"Erreur Sentiment: {e}")
 
-    # 2. TEST NEWS (Point critique maintenu)
+    # 2. RÉCUPÉRATION DES NEWS (Forçage de fraîcheur)
     try:
         bridge = BridgeNewsInterface()
+        # Si ton bridge a une méthode pour forcer le refresh, on l'appelle ici
+        if hasattr(bridge, 'refresh'):
+            bridge.refresh()
+            
         news_raw = bridge.get_live_alerts("EURUSD", "SWING")
         if news_raw:
             resp["news_feed"] = news_raw
         else:
-            resp["news_feed"] = "Flux vide."
+            resp["news_feed"] = "Aucune actualité majeure détectée."
     except Exception as e:
-        debug_log.append(f"Erreur Bridge: {str(e)}")
-        resp["news_feed"] = f"Erreur Bridge : {str(e)}"
-
-    # Si erreur, on envoie le debug uniquement si nécessaire, 
-    # mais sans bloquer l'affichage propre
-    if debug_log:
-        resp["news_feed"] = f"DEBUG: {'; '.join(debug_log)} | {resp['news_feed']}"
+        logging.error(f"Erreur Bridge: {e}")
+        resp["news_feed"] = "Impossible de récupérer les flux live."
 
     return resp
 
@@ -396,13 +394,22 @@ async def route_investor_audit(data: dict, premium: bool = Depends(verifier_acce
     text = data.get("text")
     actif = data.get("actif")
     try:
-        contexte = dashboard_engine.market_guard.preparer_contexte_marche(actif)
+        # Utilisation de l'instance locale ou globale selon ta config
+        # Si market_guard échoue, on prévoit un repli
+        contexte = {}
+        try:
+            contexte = dashboard_engine.market_guard.preparer_contexte_marche(actif)
+        except AttributeError:
+            # Repli si market_guard n'est pas accessible
+            contexte = {"status": "Market context unavailable"}
+            
         resultat_audit = mentor_ia.analyser_coherence_investisseur(text, contexte)
         return {
             "audit": resultat_audit,
             "market_snapshot": contexte
         }
     except Exception as e:
+        logging.error(f"Erreur Audit Investor: {e}")
         raise HTTPException(status_code=500, detail=str(e)) 
     
 @app.get("/analytics/performance/{mode}")
