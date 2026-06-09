@@ -19,7 +19,7 @@ export default function Dashboard() {
   const [isSaving, setIsSaving] = useState(false);
   
   // Requête SWR sur ton API Python
-  const { data, error } = useSWR('http://127.0.0.1:8000/dashboard/metrics', fetcher, {
+  const { data, error } = useSWR('https://trade-mind-w6rs.onrender.com/dashboard/metrics', fetcher, {
     refreshInterval: 5000 
   });
 
@@ -97,9 +97,9 @@ export default function Dashboard() {
     }
     setIsSaving(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/dashboard/update-capital?amount=${val}`, { method: 'POST' });
+      const res = await fetch(`https://trade-mind-w6rs.onrender.com/dashboard/update-capital?amount=${val}`, { method: 'POST' });
       if (res.ok) {
-        await mutate('http://127.0.0.1:8000/dashboard/metrics');
+        await mutate('https://trade-mind-w6rs.onrender.com/dashboard/metrics');
         setIsEditingCap(false);
         setNewCap("");
       }
