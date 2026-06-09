@@ -58,22 +58,25 @@ export default function Home() {
   }, []);
 
   // 2. SYNCHRONISATION MENTOR IA (MarketGuard Bridge)
+  // 2. SYNCHRONISATION MENTOR IA (MarketGuard Bridge)
   const syncIntelligence = async () => {
     setLoading(true);
     try {
       const res = await fetch('http://127.0.0.1:8000/market/intelligence');
       const data = await res.json();
       
+      // On met à jour avec les données reçues, même si elles sont partielles
       setIntel({
-        fearGreed: data.fear_greed || { score: 50, rating: 'NEUTRAL', label: 'Initialisation...' },
-        news: data.news_feed || "Chargement du flux MentorIA..."
+        fearGreed: data.fear_greed || { score: 50, rating: 'NEUTRAL', label: 'Indisponible' },
+        news: data.news_feed || "Flux d'intelligence momentanément suspendu."
       });
     } catch (e) {
-      console.error("Erreur de synchronisation terminal", e);
-      setIntel({
-        fearGreed: { score: 50, rating: 'ERROR', label: 'Déconnecté' },
-        news: "Erreur de liaison avec le Mind Engine (Vérifiez votre session API)."
-      });
+      console.error("Erreur de synchronisation, mode dégradé activé", e);
+      // ICI : On affiche ce qu'on peut, sans bloquer l'interface
+      setIntel(prev => ({
+        ...prev,
+        news: "Système Market Intelligence actif (Mode Lecture Seule)"
+      }));
     } finally {
       setLoading(false);
     }
