@@ -397,7 +397,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     max_risk = app_instance.user_settings.get("risque_max", 1.0)
     rr_min = app_instance.user_settings.get("rr_min", 2.0)
 
-    # 2. DÉFINITION DU TEMPÉRAMENT (Pour GPT-4o)
+    # 2. DÉFINITION DU TEMPÉRAMENT (Pour GPT-4o-mini)
     instructions_severite = {
         "Doux": "Sois un mentor bienveillant. Encourage le trader même en cas d'erreur.",
         "Neutre": "Sois un analyste pro et factuel. Rappelle les règles sans détour.",
@@ -870,7 +870,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     
     try:
         response = client_architect.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : {severite}."}, 
                 {"role": "user", "content": prompt}
@@ -1108,7 +1108,7 @@ def analyser_compagnon_live(app_instance, message_utilisateur, plan_initial_resu
     try:
         # Appel à l'API OpenAI avec le prompt non-simplifié
         response = client_guardian.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": prompt_officiel},
                 {"role": "user", "content": message_utilisateur}
@@ -1136,7 +1136,7 @@ def synthetiser_plan_pour_guardian(analyse_complete, actif):
     """
     try:
         response = client_architect.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt_synthese}],
             temperature=0.3
         )
@@ -1147,7 +1147,7 @@ def synthetiser_plan_pour_guardian(analyse_complete, actif):
 
 def generer_verdict_final_ia(analyse_init, logs_discipline, resultat, prix_cloture):
     """
-    Appelle gpt-4o pour générer le rapport final basé sur ton prompt 'Auditeur Final'.
+    Appelle gpt-4o-mini pour générer le rapport final basé sur ton prompt 'Auditeur Final'.
     """
     
     prompt = f"""
@@ -1236,11 +1236,11 @@ def generer_verdict_final_ia(analyse_init, logs_discipline, resultat, prix_clotu
 
     Réponds maintenant.
     """
-    client_guardian = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client_guardian = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
     
     try:
         response = client_guardian.chat.completions.create(
-            model="gpt-4o", # Version rapide et peu coûteuse
+            model="gpt-4o-mini", # Version rapide et peu coûteuse
             messages=[
                 {"role": "system", "content": "Tu es un auditeur de fonds d'investissement expert en psychologie du trading."},
                 {"role": "user", "content": prompt}
@@ -1354,7 +1354,7 @@ def analyser_question_suivi(etape_nom, question, reponse_user, user_settings):
         """
         
         response = client_architect.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": f"Tu es un Mentor Trading expert et {severite}."},
                 {"role": "user", "content": prompt}
