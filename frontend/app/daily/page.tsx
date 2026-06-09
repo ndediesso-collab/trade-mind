@@ -101,7 +101,7 @@ export default function DailyMode() {
           if (target.trade_id) {
             setIaVerdict(`> SYSTÈME : Rappel du dossier #TM-${target.trade_id} depuis les serveurs Supabase...`);
             
-            const res = await fetch(`http://127.0.0.1:8000/historique/get/${target.trade_id}`);
+            const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${target.trade_id}`);
             if (res.ok) {
               const fullTrade = await res.json();
               
@@ -203,7 +203,7 @@ export default function DailyMode() {
     setIaVerdict(`> ARCHITECTE ENGINE : Analyse de cohérence sémantique sur la Position ${activePositionTab + 1} (${currentPos.actif})...`);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/analyse/daily", {
+      const res = await fetch("https://trade-mind-w6rs.onrender.com/analyse/daily", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -240,7 +240,7 @@ export default function DailyMode() {
     setIsGuardianLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/analyse/guardian", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/analyse/guardian", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -275,7 +275,7 @@ export default function DailyMode() {
     setIaVerdict(`> SYSTEM : Archivage de la Position ${activePositionTab + 1} dans la base cloud...`);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/database/save", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -323,7 +323,7 @@ export default function DailyMode() {
     )).join("\n\n");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/database/save", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
