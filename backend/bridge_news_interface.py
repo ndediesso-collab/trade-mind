@@ -4,36 +4,26 @@ from datetime import datetime, timedelta
 
 class BridgeNewsInterface:
     def __init__(self):
+        # On passe la clé NewsAPI aussi si nécessaire
         self.guard = MarketGuard(os.getenv("POLYGON_API_KEY"))
 
     def get_live_alerts(self, actif, mode):
-        # 1. Récupération des News Macro
+        # 1. Macro (avec cache interne de MarketGuard)
         macro_events = self.guard.get_forex_factory_news(actif)
         high_impact = [e for e in macro_events if "High" in e]
         
-        # 2. RÉCUPÉRATION GÉOPOLITIQUE (Forçage de fraîcheur)
-        # On demande explicitement les news les plus récentes
+        # 2. Géopolitique (on utilise LA méthode corrigée du MarketGuard)
+        # Elle gère déjà le tri et le filtre de date.
         geo_news = self.guard.get_geopolitical_news(actif, mode=mode)
         
-        # FILTRAGE TEMPOREL : On ne garde que les news récentes (ex: moins de 24h)
-        # Si geo_news contient des dates dans le texte, on les compare ici.
-        # Si geo_news est une liste d'objets, vérifie l'attribut 'date'.
-        
-        recent_geo = []
-        for news in geo_news:
-            # Si le texte contient une date (format de ton API), vérifie-la ici.
-            # Exemple simplifié :
-            recent_geo.append(news) 
-
-        # 3. Formatage
-        if not high_impact and not recent_geo:
+        if not high_impact and not geo_news:
             return None
             
         alert_msg = "⚠️ [ALERTE FLASH]"
         if high_impact:
             alert_msg += f"\n📊 MACRO: {', '.join(high_impact[:2])}"
-        if recent_geo:
-            # On prend la news la plus récente
-            alert_msg += f"\n🌍 GÉOPOLITIQUE: {recent_geo[0]}"
+        if geo_news:
+            # On prend la première (la plus récente)
+            alert_msg += f"\n🌍 GÉOPOLITIQUE: {geo_news[0]}"
             
         return alert_msg

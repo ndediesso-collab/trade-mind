@@ -6,6 +6,8 @@ import xml.etree.ElementTree as ET
 from openai import OpenAI
 import re
 from datetime import datetime, timedelta 
+import yfinance as yf
+import feedparser 
 
 from dotenv import load_dotenv
 
@@ -58,20 +60,26 @@ GUIDES_QUESTIONNAIRES = {
 
 # ====== CLASSE MARKETGUARD (INTÉGRÉE) =======
 class MarketGuard:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.base_url = "https://api.polygon.io"
+    def __init__(self):
+        # Plus besoin de clé API Polygon
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MentorIA/1.0"
         })
         
+        # Structure de stockage unifiée et propre
         self.storage = {
-            "polygon": {"data": None, "timestamp": 0},
+            "market_data": {"data": None, "timestamp": 0},
             "forex_factory": {"data": None, "timestamp": 0},
-            "cnn_fear_greed": {"data": None, "timestamp": 0}
+            "sentiment": {"data": None, "timestamp": 0}
         }
-        self.cache_duration = 60 # Cache de 60 secondes pour les données de marché 
+        
+        # Cache de 5 minutes pour éviter toute limitation inutile des sources gratuites
+        self.cache_duration = 300 
+
+    def _est_valide(self, key):
+        """Vérifie si la donnée en cache est encore fraîche."""
+        return (time.time() - self.storage[key]["timestamp"]) < self.cache_duration
 
     def _est_valide(self, key):
         """Vérifie la fraîcheur de la donnée en cache"""
@@ -81,289 +89,391 @@ class MarketGuard:
     def fetch_cnn_index(self):
         """Extraction brute avec protection contre les blocages"""
         url = "https://production.dataviz.cnn.io/index/feargreed/static/severity"
+        # Ajout d'un header complet pour se faire passer pour un vrai navigateur
+        headers = {
+            "Origin": "https://www.cnn.com",
+            "Referer": "https://www.cnn.com/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        
         try:
-            # On simule une origine pour éviter le rejet par CNN
-            headers = {"Origin": "https://www.cnn.com"}
-            response = self.session.get(url, headers=headers, timeout=5)
+            # Augmentation légère du timeout pour laisser le temps au serveur CNN de répondre
+            response = self.session.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             data = response.json()
             
-            now = data.get('now', {})
+            # Extraction sécurisée avec accès aux données "now"
+            now = data.get('fear_and_greed_index', {}).get('now', {})
+            
+            # Retourne un dictionnaire propre pour l'IA
             return {
-                "score": round(now.get('value', 50)),
+                "score": round(float(now.get('score', 50))),
                 "rating": now.get('rating', 'Neutral').upper(),
-                "label": f"{now.get('rating', 'Neutral').upper()} ({round(now.get('value', 50))}/100)"
+                "label": f"{now.get('rating', 'Neutral').upper()} ({round(float(now.get('score', 50)))}/100)"
             }
         except Exception as e:
-            print(f"❌ Erreur Sentiment CNN: {e}")
+            # On loggue l'erreur pour comprendre pourquoi ça échoue le cas échéant
+            print(f"❌ Erreur critique Sentiment CNN: {type(e).__name__} - {e}")
             return {"score": 50, "rating": "NEUTRAL", "label": "Indisponible"}
 
-    def get_sentiment_data(self):
-        """Accès sécurisé au sentiment avec cache"""
-        if not self._est_valide("cnn_fear_greed"):
+    def get_sentiment_data(self, force_refresh=False):
+        """
+        Accès au sentiment. 
+        force_refresh=True permet à l'IA d'ignorer le cache quand elle a besoin 
+        d'une précision chirurgicale avant de valider une thèse.
+        """
+        # On définit une durée très courte pour le sentiment (ex: 300 secondes = 5 minutes)
+        # Le marché bouge, on ne veut pas une info qui a plus de 5 minutes.
+        if force_refresh or not self._est_valide("cnn_fear_greed"):
+            print("🔄 Rafraîchissement du Fear & Greed Index...")
             data = self.fetch_cnn_index()
-            self.storage["cnn_fear_greed"] = {"data": data, "timestamp": time.time()}
+            self.storage["cnn_fear_greed"] = {
+                "data": data, 
+                "timestamp": time.time()
+            }
+        
         return self.storage["cnn_fear_greed"]["data"]
 
     # --- MODULE : POLYGON (Prix & Snapshot) ---
+    import yfinance as yf
+
     def get_market_snapshot(self, ticker):
-        """Récupère l'état du marché pour un actif précis"""
-        clean_ticker = ticker.replace("/", "").replace(" ", "").upper()
-        if not clean_ticker.startswith("C:"):
-            clean_ticker = f"C:{clean_ticker}"
+        """
+        Récupère l'état du marché via yfinance.
+        Tout est centralisé dans le cache 'market_data'.
+        """
+        # 1. Utilisation de ton formateur interne pour la cohérence
+        ticker_yf = self._formater_ticker(ticker)
+        
+        # 2. Vérification cache (Clé 'market_data' au lieu de 'polygon')
+        if self._est_valide("market_data"):
+            return self.storage["market_data"]["data"]
 
-        if self._est_valide("polygon"):
-            return self.storage["polygon"]["data"]
-
-        url = f"{self.base_url}/v2/snapshot/locale/global/markets/forex/tickers/{clean_ticker}?apiKey={self.api_key}"
         try:
-            res = self.session.get(url, timeout=5)
-            res.raise_for_status()
-            data = res.json()
-            self.storage["polygon"] = {"data": data, "timestamp": time.time()}
-            return data
+            # 3. Appel yfinance
+            stock = yf.Ticker(ticker_yf)
+            data = stock.history(period="1d")
+            
+            if data.empty:
+                return None
+                
+            last_row = data.iloc[-1]
+            
+            # 4. Reconstruction du dictionnaire de données
+            snapshot = {
+                "ticker": ticker,
+                "price": float(last_row['Close']),
+                "open": float(last_row['Open']),
+                "high": float(last_row['High']),
+                "low": float(last_row['Low']),
+                "volatility": float(last_row['High'] - last_row['Low']),
+                "timestamp": time.time()
+            }
+            
+            # 5. Mise en cache propre
+            self.storage["market_data"] = {"data": snapshot, "timestamp": time.time()}
+            return snapshot
+            
         except Exception as e:
-            print(f"❌ Erreur Polygon Snapshot: {e}")
+            print(f"❌ Erreur YFinance Snapshot pour {ticker_yf}: {e}")
             return None
 
     def _formater_ticker(self, actif):
         """
-        Détection intelligente de l'actif (Forex, Crypto, Actions).
-        Nettoie 'EUR/USD' ou 'GBP JPY' pour Polygon.
+        Détection intelligente de l'actif pour le système YFinance gratuit.
+        Nettoie 'EUR/USD' ou 'BTC' pour une requête Yahoo Finance valide.
         """
         clean = actif.replace("/", "").replace(" ", "").upper()
         
-        # Logique Forex Universelle
+        # 1. Logique Forex (ex: EURUSD -> EURUSD=X)
         if len(clean) == 6:
-            return f"C:{clean}"
+            return f"{clean}=X"
             
-        # Logique Crypto
-        if clean.startswith("BTC") or clean.startswith("ETH"):
-            return f"X:{clean}"
+        # 2. Logique Crypto (ex: BTC -> BTC-USD)
+        if clean in ["BTC", "ETH", "SOL", "XRP"]:
+            return f"{clean}-USD"
             
-        # Par défaut (Actions ou indices)
+        # 3. Logique Indices (Mapping manuel simple pour tes tests)
+        indices_map = {
+            "DAX": "^GDAXI",
+            "SP500": "^GSPC",
+            "NASDAQ": "^IXIC",
+            "DJI": "^DJI"
+        }
+        if clean in indices_map:
+            return indices_map[clean]
+            
+        # 4. Par défaut (Actions ou cas général)
         return clean
 
     def get_last_price(self, ticker):
-        """Récupère le tout dernier prix coté."""
-        if self._est_valide("polygon") and self.storage["polygon"]["data"]:
-            return self.storage["polygon"]["data"].get("price")
+        """Récupère le tout dernier prix coté via YFinance."""
+        # 1. Vérification du cache (Clé unifiée 'market_data')
+        if self._est_valide("market_data") and self.storage["market_data"].get("data"):
+            return self.storage["market_data"]["data"].get("price")
 
-        ticker_poly = self._formater_ticker(ticker)
-        url = f"{self.base_url}/v2/last/trade/{ticker_poly}?apiKey={self.api_key}"
+        # 2. Formatage du ticker
+        ticker_yf = self._formater_ticker(ticker)
+        
         try:
-            resp = self.session.get(url, timeout=5).json()
-            price = resp.get("results", {}).get("p") or resp.get("last", {}).get("price")
-            return price
-        except: 
+            # 3. Récupération directe du prix
+            stock = yf.Ticker(ticker_yf)
+            price = stock.fast_info['last_price']
+            
+            # 4. Mise à jour du cache (Clé unifiée 'market_data')
+            self.storage["market_data"] = {
+                "data": {"price": price}, 
+                "timestamp": time.time()
+            }
+            return float(price)
+            
+        except Exception as e:
+            print(f"❌ Erreur YFinance Last Price pour {ticker_yf}: {e}")
             return None
 
     def get_volatility_atr(self, ticker):
         """
-        Récupère les données de la veille (Previous Close) pour calculer 
-        le range et préparer les bornes ADR pour l'IA.
+        Récupère les données de la veille (Previous Close) via YFinance 
+        pour calculer le range quotidien.
         """
-        if self._est_valide("polygon") and self.storage["polygon"]["data"]:
-            return self.storage["polygon"]["data"].get("volatility")
+        # 1. Vérification du cache (si on a déjà calculé pour cet actif)
+        if self._est_valide("market_data") and self.storage.get("last_daily_stats"):
+            return self.storage["last_daily_stats"].get("range")
         
-        ticker_poly = self._formater_ticker(ticker)
-        url = f"{self.base_url}/v2/aggs/ticker/{ticker_poly}/prev?apiKey={self.api_key}"
+        ticker_yf = self._formater_ticker(ticker)
         
         try:
-            resp = self.session.get(url, timeout=5).json()
-            if resp.get("results"):
-                res = resp["results"][0]
-                high = res.get("h", 0)
-                low = res.get("l", 0)
-                close = res.get("c", 0)
+            # 2. Récupération des données historiques des 2 derniers jours
+            stock = yf.Ticker(ticker_yf)
+            # On prend les 2 derniers jours pour être sûr d'avoir la veille complète
+            hist = stock.history(period="2d")
+            
+            if len(hist) < 2:
+                return 0
                 
-                daily_range = high - low
-                
-                self.storage["last_daily_stats"] = {
-                    "prev_high": high,
-                    "prev_low": low,
-                    "prev_close": close,
-                    "range": daily_range
-                }
-                return daily_range
-            return 0
+            # 3. Extraction de l'avant-dernière ligne (la veille)
+            yesterday = hist.iloc[-2]
+            high = float(yesterday['High'])
+            low = float(yesterday['Low'])
+            close = float(yesterday['Close'])
+            
+            daily_range = high - low
+            
+            # 4. Mise en cache du contexte technique
+            self.storage["last_daily_stats"] = {
+                "prev_high": high,
+                "prev_low": low,
+                "prev_close": close,
+                "range": daily_range
+            }
+            
+            return daily_range
+            
         except Exception as e:
-            print(f"Erreur Polygon Volatility: {e}")
+            print(f"❌ Erreur YFinance Volatility pour {ticker_yf}: {e}")
             return 0
 
     def get_daily_range_stats(self, ticker):
         """
-        Calcule les statistiques ADR glissantes basées sur l'historique 
-        récent des 5 derniers jours pour la règle du 'carburant de session'.
+        Calcule les statistiques ADR glissantes (5 jours) via YFinance.
         """
-        ticker_poly = self._formater_ticker(ticker)
-        aujourdhui = datetime.date.today()
-        il_ya_dix_jours = aujourdhui - datetime.timedelta(days=10)
+        ticker_yf = self._formater_ticker(ticker)
         
-        url = f"{self.base_url}/v2/aggs/ticker/{ticker_poly}/range/1/day/{il_ya_dix_jours}/{aujourdhui}?sort=desc&limit=5&apiKey={self.api_key}"
         try:
-            resp = self.session.get(url, timeout=5).json()
-            results = resp.get("results", [])
-            if results:
-                ranges = [r.get("h", 0) - r.get("l", 0) for r in results]
-                avg_adr = sum(ranges) / len(ranges)
-                return {
-                    "adr_moyenne": round(avg_adr, 5),
-                    "dernier_high": results[0].get("h", 0),
-                    "dernier_low": results[0].get("l", 0)
-                }
-            return {"adr_moyenne": 0.00200, "dernier_high": 0, "dernier_low": 0}
-        except:
+            # 1. Récupération des 6 derniers jours (pour calculer 5 jours complets)
+            stock = yf.Ticker(ticker_yf)
+            hist = stock.history(period="6d")
+            
+            if hist.empty or len(hist) < 2:
+                return {"adr_moyenne": 0.00200, "dernier_high": 0, "dernier_low": 0}
+
+            # 2. Calcul du range (High - Low) pour chaque jour
+            # hist['High'] et hist['Low'] sont des Series pandas, on peut faire la soustraction directement
+            daily_ranges = hist['High'] - hist['Low']
+            
+            # On prend la moyenne des 5 derniers jours
+            avg_adr = daily_ranges.tail(5).mean()
+            
+            # Dernières valeurs pour le contexte
+            dernier_high = float(hist['High'].iloc[-1])
+            dernier_low = float(hist['Low'].iloc[-1])
+            
+            return {
+                "adr_moyenne": round(float(avg_adr), 5),
+                "dernier_high": dernier_high,
+                "dernier_low": dernier_low
+            }
+            
+        except Exception as e:
+            print(f"❌ Erreur YFinance ADR pour {ticker_yf}: {e}")
             return {"adr_moyenne": 0.00200, "dernier_high": 0, "dernier_low": 0}
 
     def get_forex_factory_news(self, actif):
-        if self._est_valide("forex_factory"):
-            return self.storage["forex_factory"]["data"]
+        """
+        Récupère les news High/Medium Impact sur le calendrier Forex Factory.
+        Filtre les événements pour inclure uniquement ceux d'aujourd'hui et demain.
+        """
+        # Utilisation d'un cache court (30 min) pour ne pas spammer le site
+        if self._est_valide("market_data") and self.storage["market_data"].get("forex_factory"):
+            return self.storage["market_data"]["forex_factory"]["data"]
 
         url_calendar = "https://www.forexfactory.com/ffcal_week_this.xml"
         try:
-            response = self.session.get(url_calendar, timeout=5)
+            response = self.session.get(url_calendar, timeout=10)
             root = ET.fromstring(response.content)
-            events_importants = []
+            
+            events_filtres = []
             paire = actif.replace("/", "").replace(" ", "").upper()
             devises_concernees = [paire[:3], paire[3:]]
+            
+            maintenant = datetime.utcnow()
+            
             for event in root.findall('event'):
+                # Extraction des données
                 devise = event.find('symbol').text.upper() if event.find('symbol') is not None else ""
                 impact = event.find('impact').text if event.find('impact') is not None else ""
                 title = event.find('title').text if event.find('title') is not None else "News"
-                if devise in devises_concernees and impact in ['High', 'Medium']:
-                    events_importants.append(f"⚠️ [{impact}] {devise}: {title}")
+                
+                # Conversion date/heure (Le XML donne la date et l'heure séparément)
+                date_str = event.find('date').text # Format: "06-09-2026"
+                time_str = event.find('time').text # Format: "08:30am"
+                
+                # Création d'un objet datetime pour comparaison
+                # Note: On suppose le format MM-DD-YYYY
+                dt_event = datetime.strptime(f"{date_str} {time_str}", "%m-%d-%Y %I:%M%p")
+                
+                # FILTRE TEMP : Aujourd'hui et demain
+                if dt_event.date() >= maintenant.date() and dt_event.date() <= (maintenant.date() + timedelta(days=1)):
+                    if devise in devises_concernees and impact in ['High', 'Medium']:
+                        # On ajoute l'heure pour que l'IA sache si la news est passée ou à venir
+                        status = "✅ PASSÉ" if dt_event < maintenant else "⏳ À VENIR"
+                        events_filtres.append(f"{status} [{dt_event.strftime('%H:%M')}] ⚠️ [{impact}] {devise}: {title}")
             
-            self.storage["forex_factory"] = {"data": events_importants, "timestamp": time.time()}
-            return events_importants
-        except: 
+            # Mise en cache et retour
+            self.storage["market_data"]["forex_factory"] = {"data": events_filtres, "timestamp": time.time()}
+            return events_filtres
+            
+        except Exception as e:
+            print(f"❌ Erreur calendrier ForexFactory: {e}")
             return []
-        
-    from datetime import datetime, timedelta
 
-def get_geopolitical_news(self, actif, mode="SCALP"):
-    """
-    Récupère les news géopolitiques via NewsAPI avec filtre strict de fraîcheur.
-    """
-    try:
-        keywords = "(War OR Geopolitical OR Election OR Crisis OR Sanctions OR Tensions OR Inflation OR Recession)"
+    def get_geopolitical_news(self, actif, mode="SCALP"):
+        """
+        Récupère les news géopolitiques via le flux RSS d'Investing.com
+        avec un filtre strict sur les mots-clés à fort impact.
+        """
+        # Liste des mots-clés qui doivent déclencher une alerte pour l'IA
+        KEYWORDS = ['War', 'Geopolitical', 'Crisis', 'Election', 'Sanctions', 
+                    'Tension', 'Inflation', 'Recession', 'Conflict', 'Central Bank']
         
-        # 1. Calcul de la date d'hier pour forcer la fraîcheur
-        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
-        
-        # 2. Ajustement dynamique du tri et ajout du paramètre 'from'
-        sort_order = "publishedAt" if mode == "SCALP" else "relevancy"
-        
-        # Ajout du paramètre &from={yesterday} pour bannir les news de mai
-        url = (
-            f"https://newsapi.org/v2/everything?"
-            f"q={keywords}&"
-            f"from={yesterday}&"
-            f"language=en&"
-            f"pageSize=3&"
-            f"sortBy={sort_order}&"
-            f"apiKey={os.getenv('NEWS_API_KEY')}"
-        )
-        
-        response = self.session.get(url, timeout=5)
-        response.raise_for_status()
-        
-        data = response.json()
-        articles = data.get("articles", [])
-        
-        # 3. Filtrage supplémentaire au cas où l'API renvoie des résultats non pertinents
-        if not articles:
-            return ["🌍 Sentiment Géopolitique: Calme (aucune tension majeure détectée)."]
+        try:
+            url = "https://fr.investing.com/rss/news_285.rss"
+            feed = feedparser.parse(url)
+            news_list = []
+            maintenant = datetime.utcnow()
             
-        news_list = []
-        for a in articles:
-            # Nettoyage du titre pour éviter les caractères spéciaux qui cassent l'IA
-            title = a['title'].replace('"', "'")
-            time_str = a.get('publishedAt', 'N/A')
-            news_list.append(f"🌍 [GEOPOLITIQUE/RISQUE][{mode}] {title} ({time_str})")
-        
-        return news_list
+            for entry in feed.entries:
+                # 1. Nettoyage et préparation
+                title = entry.title.replace('"', "'")
+                
+                # 2. FILTRE DE PERTINENCE : On ne garde que si le titre contient un mot-clé
+                if not any(k.lower() in title.lower() for k in KEYWORDS):
+                    continue
+                
+                # 3. FILTRE TEMPOREL : Les dernières 24h
+                dt_pub = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                age_heures = int((maintenant - dt_pub).total_seconds() // 3600)
+                
+                if age_heures < 24:
+                    news_list.append(f"🌍 [GEOPOLITIQUE][{mode}] {title} (Il y a {age_heures}h)")
+                
+                # On limite la liste aux 3 news les plus importantes
+                if len(news_list) >= 3:
+                    break
+            
+            if not news_list:
+                return ["🌍 Sentiment Géopolitique: Calme (aucune tension majeure détectée)."]
+                
+            return news_list
 
-    except Exception as e:
-        print(f"❌ Erreur flux Géopolitique: {e}")
-        return [f"🌍 Sentiment Géopolitique: Flux temporairement indisponible."]    
+        except Exception as e:
+            print(f"❌ Erreur flux RSS Géopolitique: {e}")
+            return [f"🌍 Sentiment Géopolitique: Flux temporairement indisponible."]
 
     def preparer_contexte_marche(self, actif):
         """
-        Orchestrateur enrichi pour fournir les données spécifiques 
-        aux modes Daily (ADR/Heure) et Investor (Sentiment Long Terme).
+        Orchestrateur propre : centralise toutes les données temps réel 
+        pour l'IA de manière cohérente et gratuite.
         """
-        maintenant = datetime.datetime.now()
+        maintenant = datetime.datetime.utcnow() # Utilisation de l'UTC pour le trading
         heure_serveur = maintenant.strftime("%H:%M")
         
+        # 1. On récupère le sentiment (forcé si nécessaire)
         sentiment = self.get_sentiment_data()
 
-        if not self._est_valide("polygon"):
+        # 2. On vérifie le cache global "market_data" (auparavant "polygon")
+        if not self._est_valide("market_data"):
             prix = self.get_last_price(actif)
             vol = self.get_volatility_atr(actif)
-            stats_journalieres = self.get_daily_range_stats(actif) 
+            stats_adr = self.get_daily_range_stats(actif)
             
-            self.storage["polygon"] = {
+            # Stockage dans la clé unifiée "market_data"
+            self.storage["market_data"] = {
                 "data": {
-                    "price": prix, 
+                    "price": prix,
                     "volatility": vol,
-                    "adr_stats": stats_journalieres,
+                    "adr_stats": stats_adr,
                     "timestamp_str": heure_serveur
-                } if prix else {"price": 1.0, "volatility": 0, "adr_stats": {}, "timestamp_str": heure_serveur},
+                },
                 "timestamp": time.time()
             }
 
-        news = self.get_forex_factory_news(actif)
+        # 3. Récupération des news (Calendrier + Géopolitique)
+        # On appelle le calendrier et les news ici pour les inclure au contexte
+        news_macro = self.get_forex_factory_news(actif)
+        news_geo = self.get_geopolitical_news(actif)
 
+        # 4. Synthèse finale pour l'IA
+        data = self.storage["market_data"]["data"]
+        
         return {
-            "prix_actuel": self.storage["polygon"]["data"]["price"],
-            "volatilite": self.storage["polygon"]["data"]["volatility"],
-            "adr_data": self.storage["polygon"]["data"]["adr_stats"], 
-            "heure_actuelle": self.storage["polygon"]["data"]["timestamp_str"], 
-            "news_impact": news,
-            "sentiment": sentiment 
+            "heure_utc": heure_serveur,
+            "prix_actuel": data.get("price"),
+            "volatilite_atr": data.get("volatility"),
+            "adr_data": data.get("adr_stats"),
+            "news_macro": news_macro,
+            "news_geo": news_geo,
+            "sentiment_global": sentiment
         }
 
 # ====== LOGIQUE MENTOR =======
 
-def get_news(actif="EURUSD", guard=None, POLYGON_API_KEY=None, NEWS_API_KEY=None):
+def get_news(actif="EURUSD", guard=None):
     """
-    Synthèse intelligente séparant la Macro-économie de la Géopolitique.
+    Synthèse intelligente qui utilise exclusivement les méthodes
+    de MarketGuard (Cache + Flux RSS gratuits).
     """
     if guard is None:
-        guard = MarketGuard(POLYGON_API_KEY)
+        # Pas besoin de clés API ici, MarketGuard les gère en interne
+        # si nécessaire ou utilise les flux publics.
+        guard = MarketGuard(api_key=None)
     
-    # 1. Données brutes
+    # 1. Données brutes (Forex Factory + CNN)
     events_critiques = guard.get_forex_factory_news(actif)
     sentiment_global = guard.get_sentiment_data()
     
-    # 2. Récupération des News Géopolitiques (Focus Risque)
-    try:
-        # On cible uniquement les sujets à fort impact géopolitique
-        geo_query = "War OR Geopolitical OR Crisis OR Election OR Sanctions OR Tensions"
-        geo_url = f"https://newsapi.org/v2/everything?q={geo_query}&language=en&pageSize=3&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
-        r_geo = guard.session.get(geo_url, timeout=5)
-        geo_articles = r_geo.json().get("articles", [])
-        geo_titles = [f"🌍 {a['title']}" for a in geo_articles]
-    except:
-        geo_titles = ["🌍 News géopolitiques indisponibles."]
-
-    # 3. Récupération des News Macro-économiques liées à la paire
-    try:
-        macro_query = f"{actif[:3]} OR {actif[-3:]} AND (Central Bank OR Interest Rate OR CPI OR GDP OR Inflation)"
-        macro_url = f"https://newsapi.org/v2/everything?q={macro_query}&language=en&pageSize=2&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
-        r_macro = guard.session.get(macro_url, timeout=5)
-        macro_articles = r_macro.json().get("articles", [])
-        macro_titles = [f"📊 {a['title']}" for a in macro_articles]
-    except:
-        macro_titles = ["📊 News macro indisponibles."]
-
+    # 2. Récupération Géo (Via notre nouveau flux RSS Investing.com)
+    geo_titles = guard.get_geopolitical_news(actif)
+    
+    # 3. Récupération Macro (On peut enrichir le calendrier avec des titres de news macro)
+    # Note : Le calendrier Forex Factory contient déjà le 'titre' de la news macro.
+    # C'est redondant de chercher ailleurs.
+    
     # 4. Construction de la synthèse structurée
     resultat = f"--- 🎭 INDICE SENTIMENT GLOBAL ---\n{sentiment_global['label']}\n\n"
     
     resultat += "--- 📅 CALENDRIER ÉCONOMIQUE (MACRO) ---\n"
     resultat += "\n".join(events_critiques) if events_critiques else "Aucun événement impactant prévu."
-    resultat += "\n" + "\n".join(macro_titles)
     
     resultat += "\n\n--- 🌍 FLASH GÉOPOLITIQUE (RISK) ---\n"
     resultat += "\n".join(geo_titles)
@@ -395,23 +505,34 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         - Stats Session (W/L/BE): {data_json.get('stats', 'N/A')}
         """
 
-    # 4. RÉCUPÉRATION DES DONNÉES (Via le Hub MarketGuard de l'instance)
+    # 4. RÉCUPÉRATION DES DONNÉES (Via l'orchestrateur MarketGuard)
     if not hasattr(app_instance, 'market_guard'):
-        app_instance.market_guard = MarketGuard(POLYGON_API_KEY)
+        # On n'a plus besoin de clé Polygon ici
+        app_instance.market_guard = MarketGuard(api_key=None)
     
     guard = app_instance.market_guard
-    market_data = guard.preparer_contexte_marche(actif) 
-    news = get_news(actif)
-    sentiment = guard.get_sentiment_data() # Récupère le Fear & Greed (Score + Rating)
     
+    # L'orchestrateur centralise tout : prix, ADR, news et sentiment
+    market_context = guard.preparer_contexte_marche(actif)
+    
+    # Extraction propre des données pour le prompt
+    market_data = {
+        "prix_actuel": market_context.get("prix_actuel", "N/A"),
+        "volatilite": market_context.get("volatilite_atr", "N/A"),
+        "adr_stats": market_context.get("adr_data", {}),
+        "news": market_context.get("news_macro", []) + market_context.get("news_geo", [])
+    }
+    sentiment = market_context.get("sentiment_global", {"score": 50, "rating": "NEUTRAL"})
+
     # RÉCUPÉRATION DES RÉGLAGES UTILISATEUR
-    severite = app_instance.user_settings.get("ia_severite", "Neutre")
-    style = app_instance.user_settings.get("style", "Day Trading")
-    objectif = app_instance.user_settings.get("objectif", "Croissance")
-    niveau = app_instance.user_settings.get("niveau", "Intermédiaire")
-    marche = app_instance.user_settings.get("marche", "Forex")
-    max_risk = app_instance.user_settings.get("risque_max", 1.0)
-    rr_min = app_instance.user_settings.get("rr_min", 2.0)
+    user_settings = app_instance.user_settings
+    severite = user_settings.get("ia_severite", "Neutre")
+    style = user_settings.get("style", "Day Trading")
+    objectif = user_settings.get("objectif", "Croissance")
+    niveau = user_settings.get("niveau", "Intermédiaire")
+    marche = user_settings.get("marche", "Forex")
+    max_risk = user_settings.get("risque_max", 1.0)
+    rr_min = user_settings.get("rr_min", 2.0)
 
     # 2. DÉFINITION DU TEMPÉRAMENT (Pour GPT-4o)
     instructions_severite = {
@@ -637,7 +758,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
 
         3. RÉALITÉ DES NEWS & DU CONTEXTE
         Croise la thèse avec :
-        {news}
+        {market_data.get("news", [])}
 
         Objectif :
         - détecter les contradictions potentielles,
@@ -771,10 +892,11 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     ═══════════════════════════════
     DONNÉES MARCHÉ (Connectées API)
     ═══════════════════════════════
-    - Prix : {market_data.get('prix_actuel', 'N/A')}
-    - Volatilité : {market_data.get('volatilite', 'N/A')}
-    - News : {news}
-    - Sentiment (Fear & Greed) : {sentiment.get('rating')} ({sentiment.get('score')}/100)
+    - Prix Actuel : {market_data.get('prix_actuel', 'N/A')}
+    - Volatilité (ATR 5j) : {market_data.get('volatilite', 'N/A')}
+    - Bornes ADR (High/Low) : {market_data.get('adr_stats', {}).get('dernier_high', 'N/A')} / {market_data.get('adr_stats', {}).get('dernier_low', 'N/A')}
+    - News (Macro & Géo) : {', '.join(market_data.get('news', [])) if market_data.get('news') else 'Aucune news majeure détectée.'}
+    - Sentiment (Fear & Greed) : {sentiment.get('rating', 'NEUTRAL')} ({sentiment.get('score', 50)}/100)
 
     ═══════════════════════════════
     TRADE & ANALYSE
@@ -783,7 +905,6 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     - Conviction : {conviction}%
     - SL/TP : {app_instance.info_sl_tp if hasattr(app_instance, 'info_sl_tp') else 'N/A'}
     - Invalidation : {app_instance.raisonnement_user if hasattr(app_instance, 'raisonnement_user') else 'N/A'}
-
     ANALYSE :
     {nouvelle_analyse}
 
