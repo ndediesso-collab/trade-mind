@@ -28,7 +28,7 @@ export default function InvestorPage() {
 
   const fetchMarketData = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/market/intelligence?actif=${asset}`);
+      const res = await fetch(`https://trade-mind-w6rs.onrender.com/market/intelligence?actif=${asset}`);
       const data = await res.json();
       setMarketIntel(data);
     } catch (e) { console.error("Intel fetch failed", e); }
@@ -43,7 +43,7 @@ export default function InvestorPage() {
         try {
           const target = JSON.parse(ticket);
           if (target.trade_id) {
-            const res = await fetch(`http://127.0.0.1:8000/historique/get/${target.trade_id}`);
+            const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${target.trade_id}`);
             if (res.ok) {
               const fullTrade = await res.json();
               
@@ -99,7 +99,7 @@ export default function InvestorPage() {
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/database/save', {
+      const res = await fetch('https://trade-mind-w6rs.onrender.com/database/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -122,7 +122,7 @@ export default function InvestorPage() {
     if (!analysis) return;
     setIsLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/investor/audit', {
+      const res = await fetch('https://trade-mind-w6rs.onrender.com/investor/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: analysis, actif: asset })
@@ -134,7 +134,7 @@ export default function InvestorPage() {
 
   const handleFinalClose = async (result: 'WIN' | 'LOSS') => {
     try {
-      await fetch('http://127.0.0.1:8000/database/save', {
+      await fetch('https://trade-mind-w6rs.onrender.com/database/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

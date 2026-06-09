@@ -126,7 +126,7 @@ export default function ScalpMode() {
           if (target.trade_id) {
             setIaVerdict(`> SYSTÈME : Extraction du rapport de scalping #TM-${target.trade_id} depuis Supabase...`);
             
-            const res = await fetch(`http://127.0.0.1:8000/historique/get/${target.trade_id}`);
+            const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${target.trade_id}`);
             if (res.ok) {
               const fullTrade = await res.json();
               
@@ -231,7 +231,7 @@ export default function ScalpMode() {
     
     setIsLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/database/save", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -255,7 +255,7 @@ export default function ScalpMode() {
       }
     } catch (error) {
       setIaVerdict("> SÉCURITÉ : Le service Mind Engine (api.py) ne répond pas.");
-    } bits: {
+    } finally {
       setIsLoading(false);
     }
   };
@@ -271,7 +271,7 @@ export default function ScalpMode() {
     setIaVerdict("> IA COACH : Audit de cohérence macro-technique en cours...");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/analyse/swing", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/analyse/swing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -322,7 +322,7 @@ export default function ScalpMode() {
       `${postSessionText}`;
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/database/save", {
+      const response = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -62,7 +62,7 @@ export default function Home() {
   const syncIntelligence = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8000/market/intelligence');
+      const res = await fetch('https://trade-mind-w6rs.onrender.com/market/intelligence');
       const data = await res.json();
       
       // On met à jour avec les données reçues, même si elles sont partielles
