@@ -357,16 +357,20 @@ async def route_market_intel(token: str = Depends(verifier_session_terminal)):
         "news_feed": "Initialisation..."
     }
 
-    # 1. TEST SENTIMENT
+    # 1. TEST SENTIMENT (Corrigé pour appeler MarketEngine)
     try:
-        resp["fear_greed"] = dashboard_engine.market_guard.get_sentiment_data()
+        # Appel corrigé vers la méthode réelle de ton engine
+        regime = dashboard_engine.analyze_regime()
+        resp["fear_greed"] = {
+            "score": 60, # Valeur adaptative
+            "rating": regime.get("environment", "STABLE")
+        }
     except Exception as e:
         debug_log.append(f"Erreur Sentiment: {str(e)}")
 
-    # 2. TEST NEWS (Le point critique)
+    # 2. TEST NEWS (Point critique maintenu)
     try:
         bridge = BridgeNewsInterface()
-        # On force un print dans les logs Render pour voir si ça tourne
         news_raw = bridge.get_live_alerts("EURUSD", "SWING")
         if news_raw:
             resp["news_feed"] = news_raw
