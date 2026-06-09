@@ -5,6 +5,8 @@ import logging
 import httpx
 from typing import Optional
 from bridge_news_interface import BridgeNewsInterface
+# Remplace le chemin si nécessaire par le bon dossier
+from engines.market import MarketEngine 
 
 # --- LOGIQUE MÉTIER ---
 import database 
@@ -347,22 +349,24 @@ async def delete_trade(trade_id: int, token: str = Depends(verifier_session_term
 
 # --- ROUTES MARKET --- 
 
+from engines.market import MarketEngine  # Import ajouté
+
 @app.get("/market/intelligence")
 async def route_market_intel(token: str = Depends(verifier_session_terminal)):
-    debug_log = []
-    
-    # Valeurs par défaut
+    # Initialisation de la réponse
     resp = {
         "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
         "news_feed": "Initialisation..."
     }
+    
+    debug_log = []
 
-    # 1. TEST SENTIMENT (Corrigé pour appeler MarketEngine)
+    # 1. TEST SENTIMENT (Instance locale pour éviter l'erreur DashboardManager)
     try:
-        # Appel corrigé vers la méthode réelle de ton engine
-        regime = dashboard_engine.analyze_regime()
+        engine = MarketEngine()
+        regime = engine.analyze_regime()
         resp["fear_greed"] = {
-            "score": 60, # Valeur adaptative
+            "score": 60, 
             "rating": regime.get("environment", "STABLE")
         }
     except Exception as e:
@@ -375,12 +379,13 @@ async def route_market_intel(token: str = Depends(verifier_session_terminal)):
         if news_raw:
             resp["news_feed"] = news_raw
         else:
-            resp["news_feed"] = "Bridge vide (vérifier NewsAPI)"
+            resp["news_feed"] = "Flux vide."
     except Exception as e:
         debug_log.append(f"Erreur Bridge: {str(e)}")
         resp["news_feed"] = f"Erreur Bridge : {str(e)}"
 
-    # Si on a des erreurs, on les ajoute au flux pour les voir à l'écran
+    # Si erreur, on envoie le debug uniquement si nécessaire, 
+    # mais sans bloquer l'affichage propre
     if debug_log:
         resp["news_feed"] = f"DEBUG: {'; '.join(debug_log)} | {resp['news_feed']}"
 
