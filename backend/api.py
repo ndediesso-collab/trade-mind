@@ -349,20 +349,31 @@ async def delete_trade(trade_id: int, token: str = Depends(verifier_session_term
 
 @app.get("/market/intelligence")
 async def route_market_intel(token: str = Depends(verifier_session_terminal)):
+    # Initialisation des données par défaut
+    response = {
+        "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
+        "news_feed": "Flux indisponible pour le moment."
+    }
+    
+    # 1. Récupération sécurisée du sentiment
     try:
-        sentiment = dashboard_engine.market_guard.get_sentiment_data()
-        news_raw = mentor_ia.get_news(
-            actif="EURUSD", 
-            guard=dashboard_engine.market_guard,
-            POLYGON_API_KEY=mentor_ia.POLYGON_API_KEY,
-            NEWS_API_KEY=mentor_ia.NEWS_API_KEY
-        )
-        return {
-            "fear_greed": sentiment, 
-            "news_feed": news_raw
-        }
+        response["fear_greed"] = dashboard_engine.market_guard.get_sentiment_data()
     except Exception as e:
-        return {"fear_greed": {"score": 50, "rating": "NEUTRAL"}, "news_feed": str(e)}
+        logging.error(f"Erreur sentiment: {e}")
+
+    # 2. Récupération sécurisée des news (Isolée de l'IA/Mentor)
+    try:
+        # On utilise le Bridge directement ici pour l'affichage menu
+        # et on ne dépend plus de mentor_ia.get_news qui peut être couplé à OpenAI
+        bridge = BridgeNewsInterface()
+        news_raw = bridge.get_live_alerts("EURUSD", "SWING")
+        if news_raw:
+            response["news_feed"] = news_raw
+    except Exception as e:
+        logging.error(f"Erreur news: {e}")
+        response["news_feed"] = "Flux news temporairement inaccessible."
+
+    return response
 
 @app.post("/investor/audit")
 async def route_investor_audit(data: dict, premium: bool = Depends(verifier_acces_premium)):
