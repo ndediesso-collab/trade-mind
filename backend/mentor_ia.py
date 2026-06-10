@@ -8,6 +8,7 @@ import re
 from datetime import datetime, timedelta 
 import yfinance as yf
 import feedparser 
+from curl_cffi import requests as curl_requests
 
 from dotenv import load_dotenv
 
@@ -84,33 +85,27 @@ class MarketGuard:
 
     # --- MODULE : FEAR & GREED (Sentiment) ---
     def fetch_cnn_index(self):
-        """Extraction brute avec protection contre les blocages"""
+        """Extraction haute-fidélité via émulation navigateur (bypass Cloudflare)."""
         url = "https://production.dataviz.cnn.io/index/feargreed/static/severity"
-        # Ajout d'un header complet pour se faire passer pour un vrai navigateur
-        headers = {
-            "Origin": "https://www.cnn.com",
-            "Referer": "https://www.cnn.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
         
         try:
-            # Augmentation légère du timeout pour laisser le temps au serveur CNN de répondre
-            response = self.session.get(url, headers=headers, timeout=10)
+            # On utilise impersonate="chrome120" pour simuler un vrai navigateur récent
+            # La bibliothèque curl_cffi gère tout le handshake TLS automatiquement
+            response = curl_requests.get(url, impersonate="chrome120", timeout=10)
             response.raise_for_status()
             data = response.json()
             
-            # Extraction sécurisée avec accès aux données "now"
+            # Extraction sécurisée
             now = data.get('fear_and_greed_index', {}).get('now', {})
             
-            # Retourne un dictionnaire propre pour l'IA
             return {
                 "score": round(float(now.get('score', 50))),
                 "rating": now.get('rating', 'Neutral').upper(),
                 "label": f"{now.get('rating', 'Neutral').upper()} ({round(float(now.get('score', 50)))}/100)"
             }
         except Exception as e:
-            # On loggue l'erreur pour comprendre pourquoi ça échoue le cas échéant
-            print(f"❌ Erreur critique Sentiment CNN: {type(e).__name__} - {e}")
+            # Si ça échoue, on affiche l'erreur en log pour ton debug
+            print(f"❌ Erreur critique Sentiment CNN (impersonation): {e}")
             return {"score": 50, "rating": "NEUTRAL", "label": "Indisponible"}
 
     def get_sentiment_data(self, force_refresh=False):
