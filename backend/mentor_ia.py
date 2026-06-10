@@ -29,6 +29,7 @@ client_architect = OpenAI(api_key=os.getenv("OPENAI_ARCHITECT_KEY"))
 
 # IA 2 : Le Guardian (Discipline & Émotion)
 client_guardian = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
+
 import time
 import requests
 from datetime import datetime, timedelta 
@@ -67,6 +68,7 @@ GUIDES_QUESTIONNAIRES = {
 class MarketGuard:
     def __init__(self):
         # Plus besoin de clé API Polygon
+        self.client_architect = client_architect
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MentorIA/1.0"
@@ -400,7 +402,7 @@ class MarketGuard:
             try:
                 # Utilisation de ton client dédié à l'architecture/analyse
                 response = self.client_architect.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4o",
                     messages=[{"role": "system", "content": "Tu es un analyste financier expert en risques géopolitiques."},
                             {"role": "user", "content": prompt}],
                     temperature=0.2 # Très bas pour éviter les hallucinations

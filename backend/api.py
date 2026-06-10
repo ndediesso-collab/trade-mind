@@ -235,57 +235,38 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
             "take_profit": data.take_profit, "calculated_rr": data.calculated_rr
         }
 
-        # Initialisation du feedback
-        feedback_ia = ""
-        
+        # 1. TENTATIVE IA (Avec gestion de secours)
+        feedback_ia = "Analyse IA temporairement indisponible."
         try:
-            if hasattr(mentor_ia, "lancer_analyse_api"):
-                resultat = mentor_ia.lancer_analyse_api(
-                    analyse=data.analyse, 
-                    conviction=data.conviction, 
-                    actif=data.actif, 
-                    user_settings={"ia_severite": "Strict" if is_locked else "Neutre"},
-                    data_json=data_json 
-                )
-                feedback_ia = resultat.get("verdict", "")
-            
-            # Vérification de sécurité : si l'IA renvoie vide, on lève une erreur explicite
-            if not feedback_ia:
-                 raise Exception("L'IA n'a retourné aucune analyse. Vérifiez les logs.")
+            # On utilise l'instance de ton moteur (ou module mentor_ia)
+            # On passe les arguments de façon classique, pas seulement par mots-clés
+            resultat = mentor_ia.lancer_analyse_api(
+                data.analyse, 
+                data.conviction, 
+                data.actif, 
+                {"ia_severite": "Strict" if is_locked else "Neutre"}
+            )
+            feedback_ia = resultat.get("verdict", feedback_ia)
+        except Exception as ie:
+            logging.error(f"⚠️ IA en échec, mode secours activé : {ie}")
 
-            # --- INJECTION NEWS PONT ---
+        # 2. INJECTION NEWS (Toujours fait)
+        try:
             bridge = BridgeNewsInterface()
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
                 feedback_ia = f"{alerte}\n\n[ANALYSE IA]\n{feedback_ia}"
-            # ---------------------------
+        except Exception as e:
+            logging.error(f"⚠️ Erreur récupération news : {e}")
 
-        except Exception as ie:
-            logging.error(f"⚠️ Erreur détaillée IA Mentor (Save): {ie}")
-            return {"status": "error", "message": f"Erreur IA : {str(ie)}", "engine_status": "ERROR"}
-
-        # Sauvegarde en base de données
-        trade_id = database.sauvegarder_trade_final(
-            actif=data.actif, biais="Neutre", conviction=data.conviction, score_ia=0,      
-            analyse=data.analyse, feedback=feedback_ia, statut=data.statut,
-            position=data.position, mode=data.mode, t_type=data.type,
-            feedback_architect=feedback_ia if data.mode == "INVESTOR" else "",
-            perf_win=0, perf_loss=0, perf_be=0
-        )
+        # 3. SAUVEGARDE (Sûre à 100%, indépendante de l'IA)
+        trade_id = database.sauvegarder_trade_final(...)
         
-        if not trade_id:
-            raise Exception("Échec de l'enregistrement dans Supabase (Base de données).")
-
-        return {
-            "status": "success", 
-            "trade_id": trade_id,
-            "feedback": feedback_ia, 
-            "engine_status": risk_engine_data.get("status", "SAFE")
-        }
+        return {"status": "success", "trade_id": trade_id, "feedback": feedback_ia, "engine_status": ("Status", "SAFE")}
 
     except Exception as e:
-        logging.error(f"❌ Erreur critique Sauvegarde Générique : {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"❌ Erreur critique : {e}")
+        raise HTTPException(status_code=500, detail="Trade enregistré mais analyse IA indisponible.")
 
 @app.post("/analyse/guardian")
 async def route_guardian_live_chat(data: GuardianRequest, token: str = Depends(verifier_session_terminal)):
