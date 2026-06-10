@@ -197,9 +197,11 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
                 feedback_ia = resultat.get("verdict", feedback_ia)
             elif hasattr(mentor_ia, "lancer_analyse"):
                 resultat = mentor_ia.lancer_analyse(
-                    data.analyse, data.conviction, data.actif
-                )
-                feedback_ia = resultat.get("verdict", feedback_ia)
+                    data.analyse, 
+                    data.conviction, 
+                    data.actif,
+                    {"ia_severite": "Strict" if is_locked else "Neutre"} # AJOUTE CET ARGUMENT
+    )
         except Exception as ie:
             logging.error(f"⚠️ Erreur appel IA : {ie}")
             # On ne fait pas de return ici, on laisse le code continuer pour sauver le trade
