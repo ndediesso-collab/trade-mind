@@ -8,19 +8,13 @@ class BridgeNewsInterface:
         self.guard = MarketGuard()
 
     def get_live_alerts(self, actif, mode):
-        """
-        Récupère et formate toutes les alertes macro et géopolitiques.
-        """
-        # 1. Récupération des données via le MarketGuard
-        macro_events = self.guard.get_forex_factory_news(actif)
-        geo_news_brutes = self.guard.get_geopolitical_news(actif, mode=mode)
+        # Si on veut TOUT le marché, on ne filtre pas par actif
+        # On définit une constante ou un mot-clé spécial pour le GLOBAL
+        cible = None if actif in ["GLOBAL", "ALL", "MARKET"] else actif
         
-        # 2. Filtrage intelligent via l'IA Analyste (intégration directe)
-        geo_news_filtrees = self.guard.filtrer_news_par_ia(geo_news_brutes)
-        
-        # Sécurité : Si les listes sont None, on les transforme en listes vides
-        macro_events = macro_events if macro_events is not None else []
-        geo_news = geo_news_filtrees if geo_news_filtrees is not None else []
+        # 1. Récupération (On passe 'cible' qui peut être None)
+        macro_events = self.guard.get_forex_factory_news(cible)
+        geo_news = self.guard.get_geopolitical_news(cible, mode=mode)
         
         # 3. Vérification s'il y a quelque chose à afficher
         if not macro_events and not geo_news:

@@ -111,29 +111,35 @@ class MarketGuard:
             logger.error(f"CNN Error: {str(e)}")
             return {"score": 50, "rating": "NEUTRAL", "label": "Indisponible"}
 
-    def get_sentiment_data(self, force_refresh=False):
+    def fetch_cnn_index(self):
         """
-        Accès au sentiment avec gestion de cache intelligente.
+        Récupère les données CNN via l'API sécurisée.
+        Cette méthode est appelée par get_sentiment_data.
         """
-        # Durée de vie du cache : 300 secondes (5 minutes)
-        CACHE_DURATION = 300 
+        url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://edition.cnn.com/',
+        }
         
-        # Vérification de la validité du cache
-        is_cache_valid = False
-        if "cnn_fear_greed" in self.storage:
-            elapsed = time.time() - self.storage["cnn_fear_greed"].get("timestamp", 0)
-            if elapsed < CACHE_DURATION:
-                is_cache_valid = True
-
-        if force_refresh or not is_cache_valid:
-            logger.info(f"🔄 Rafraîchissement forcé={force_refresh} - Appel CNN...")
-            data = self.fetch_cnn_index()
-            self.storage["cnn_fear_greed"] = {
-                "data": data, 
-                "timestamp": time.time()
-            }
-        
-        return self.storage["cnn_fear_greed"]["data"]
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                fng = data.get('fear_and_greed', {})
+                
+                score_brut = fng.get('score')
+                # On retourne un dictionnaire propre que ton frontend pourra utiliser
+                return {
+                    "score": int(round(float(score_brut))) if score_brut is not None else 50,
+                    "rating": fng.get('rating', 'NEUTRAL'),
+                    "raw_score": float(score_brut) if score_brut is not None else 50.0
+                }
+        except Exception as e:
+            logger.error(f"Erreur lors de l'appel API CNN : {e}")
+            
+        # Valeur par défaut en cas d'échec pour ne pas casser l'affichage
+        return {"score": 50, "rating": "NEUTRAL", "raw_score": 50.0}
 
     # --- MODULE : POLYGON (Prix & Snapshot) ---
 
