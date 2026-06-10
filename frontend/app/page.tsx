@@ -65,22 +65,19 @@ export default function Home() {
       const res = await fetch('https://trade-mind-w6rs.onrender.com/market/intelligence');
       const data = await res.json();
       
-      // On met à jour avec les données reçues, même si elles sont partielles
+      console.log("Données reçues du backend :", data); // <--- AJOUTE ÇA POUR DÉBUGGER
+      
       setIntel({
-        fearGreed: data.fear_greed || { score: 50, rating: 'NEUTRAL', label: 'Indisponible' },
-        news: data.news_feed || "Flux d'intelligence momentanément suspendu."
+        // Si data.fear_greed existe, utilise-le. Sinon, le système gère l'erreur.
+        fearGreed: data.fear_greed, 
+        news: data.news_feed
       });
     } catch (e) {
-      console.error("Erreur de synchronisation, mode dégradé activé", e);
-      // ICI : On affiche ce qu'on peut, sans bloquer l'interface
-      setIntel(prev => ({
-        ...prev,
-        news: "Système Market Intelligence actif (Mode Lecture Seule)"
-      }));
+      console.error("Erreur de synchro :", e);
     } finally {
       setLoading(false);
     }
-  };
+};
 
   useEffect(() => {
     syncIntelligence();
