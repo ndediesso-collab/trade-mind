@@ -305,52 +305,48 @@ class MarketGuard:
             return {"adr_moyenne": 0.00200, "dernier_high": 0, "dernier_low": 0}
 
     def get_forex_factory_news(self, actif):
-        """
-        Récupère les news High/Medium Impact sur le calendrier Forex Factory.
-        Filtre les événements pour inclure uniquement ceux d'aujourd'hui et demain.
-        """
-        # Utilisation d'un cache court (30 min) pour ne pas spammer le site
+        """Récupère les news High/Medium Impact, robuste face aux erreurs XML."""
         if self._est_valide("market_data") and self.storage["market_data"].get("forex_factory"):
             return self.storage["market_data"]["forex_factory"]["data"]
 
         url_calendar = "https://www.forexfactory.com/ffcal_week_this.xml"
         try:
             response = self.session.get(url_calendar, timeout=10)
-            root = ET.fromstring(response.content)
+            
+            # --- CORRECTION ROBUSTE ---
+            # On remplace les caractères spéciaux mal formés par du texte neutre
+            # pour éviter que ET.fromstring ne plante.
+            raw_content = response.content.decode('utf-8', errors='ignore')
+            # Remplacement des entités courantes qui posent problème
+            clean_content = re.sub(r'&(?!(amp|lt|gt|quot|apos);)', '&amp;', raw_content)
+            
+            root = ET.fromstring(clean_content)
             
             events_filtres = []
             paire = actif.replace("/", "").replace(" ", "").upper()
             devises_concernees = [paire[:3], paire[3:]]
-            
             maintenant = datetime.utcnow()
             
             for event in root.findall('event'):
-                # Extraction des données
                 devise = event.find('symbol').text.upper() if event.find('symbol') is not None else ""
                 impact = event.find('impact').text if event.find('impact') is not None else ""
                 title = event.find('title').text if event.find('title') is not None else "News"
                 
-                # Conversion date/heure (Le XML donne la date et l'heure séparément)
-                date_str = event.find('date').text # Format: "06-09-2026"
-                time_str = event.find('time').text # Format: "08:30am"
+                date_str = event.find('date').text 
+                time_str = event.find('time').text 
                 
-                # Création d'un objet datetime pour comparaison
-                # Note: On suppose le format MM-DD-YYYY
                 dt_event = datetime.strptime(f"{date_str} {time_str}", "%m-%d-%Y %I:%M%p")
                 
-                # FILTRE TEMP : Aujourd'hui et demain
                 if dt_event.date() >= maintenant.date() and dt_event.date() <= (maintenant.date() + timedelta(days=1)):
                     if devise in devises_concernees and impact in ['High', 'Medium']:
-                        # On ajoute l'heure pour que l'IA sache si la news est passée ou à venir
                         status = "✅ PASSÉ" if dt_event < maintenant else "⏳ À VENIR"
                         events_filtres.append(f"{status} [{dt_event.strftime('%H:%M')}] ⚠️ [{impact}] {devise}: {title}")
             
-            # Mise en cache et retour
             self.storage["market_data"]["forex_factory"] = {"data": events_filtres, "timestamp": time.time()}
             return events_filtres
             
         except Exception as e:
-            print(f"❌ Erreur calendrier ForexFactory: {e}")
+            print(f"❌ Erreur critique calendrier ForexFactory: {e}")
             return []
 
     def get_geopolitical_news(self, actif, mode="SCALP"):
@@ -359,8 +355,7 @@ class MarketGuard:
         avec un filtre strict sur les mots-clés à fort impact.
         """
         # Liste des mots-clés qui doivent déclencher une alerte pour l'IA
-        KEYWORDS = ['War', 'Geopolitical', 'Crisis', 'Election', 'Sanctions', 
-                    'Tension', 'Inflation', 'Recession', 'Conflict', 'Central Bank']
+        KEYWORDS = ['War', 'Geopolitical', 'Sanctions', 'Tension', 'Conflict', 'Middle East', 'Ukraine', 'Trade War']
         
         try:
             url = "https://fr.investing.com/rss/news_285.rss"
