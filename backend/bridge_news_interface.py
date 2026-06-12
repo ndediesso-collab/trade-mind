@@ -7,7 +7,7 @@ class BridgeNewsInterface:
         # Si on passe une instance, on l'utilise. 
         # Sinon, on en crée une (pour garder une compatibilité avec ton code actuel)
         self.guard = guard_instance if guard_instance else MarketGuard()
-        
+
     def get_live_alerts(self, actif, mode="SCALP"):
         """
         Récupère et agrège les données CNN, Macro et Géo.
@@ -27,13 +27,12 @@ class BridgeNewsInterface:
         alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment.get('score', 'N/A')}/100"
         
         # Bloc Macro : Utilisation du cache via get_forex_factory_news
-        # Liste des jours pour le formatage
         jours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
         
         if isinstance(macro_events, list):
             if len(macro_events) > 0:
                 alert_msg += "\n\n📊 MACRO (Calendrier complet):"
-                for event in macro_events[:5]: # Limité à 5 pour la clarté
+                for event in macro_events[:5]: 
                     titre = event.get('title', str(event)) if isinstance(event, dict) else str(event)
                     
                     # Extraction et formatage du jour
@@ -41,7 +40,6 @@ class BridgeNewsInterface:
                     prefixe_jour = ""
                     if date_str:
                         try:
-                            # Extraction YYYY-MM-DD
                             dt = datetime.strptime(date_str.split('T')[0], '%Y-%m-%d')
                             prefixe_jour = f"[{jours[dt.weekday()]}] "
                         except:
@@ -49,9 +47,12 @@ class BridgeNewsInterface:
                             
                     alert_msg += f"\n• {prefixe_jour}{titre}"
             else:
-                alert_msg += "\n\n📊 MACRO: Aucune actualité majeure cette semaine."
+                alert_msg += "\n\n📊 MACRO: Calendrier économique en cours de synchronisation."
+                alert_msg += "\n💡 Le flux est momentanément indisponible."
+                alert_msg += "\n🔗 Consultez le calendrier officiel directement dans la page 'Analyse & Stats'."
         else:
-            alert_msg += "\n\n📊 MACRO: Flux en attente de synchronisation..."
+            alert_msg += "\n\n📊 MACRO: Flux en attente de synchronisation."
+            alert_msg += "\n🔗 Vérifiez le calendrier économique complet dans la page 'Analyse & Stats'."
             
              
         # Bloc Géo
