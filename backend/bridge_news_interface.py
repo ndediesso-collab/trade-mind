@@ -15,7 +15,7 @@ class BridgeNewsInterface:
         
         # 1. Récupération exhaustive
         # CNN (Fear & Greed)
-        sentiment_data = self.guard.get_sentiment_data()
+        sentiment_data = self.guard.fetch_cnn_index()
         # Macro (Forex Factory)
         macro_events = self.guard.get_forex_factory_news(cible)
         # Géo (Flux RSS 10 news)

@@ -91,7 +91,7 @@ class MarketGuard:
 
     # --- MODULE : FEAR & GREED (Sentiment) ---
 
-    def fecth_cnn_index():
+    def fetch_cnn_index(self):
         print("\n--- TEST : RÉCUPÉRATION CNN (MODE NAVIGATEUR) ---")
         try:
             # Utilisation de la même logique de session et headers stricts
@@ -277,7 +277,7 @@ class MarketGuard:
         heure_serveur = maintenant.strftime("%H:%M")
         
         # 1. Récupération des données brutes
-        sentiment = self.fecth_cnn_index()
+        sentiment = self.fetch_cnn_index()
         news_macro = self.get_forex_factory_news(actif)
         news_geo_brutes = self.get_geopolitical_news(actif)
         
@@ -378,7 +378,7 @@ def get_news(actif, guard=None):
     
     # 1. Données brutes (Forex Factory + CNN)
     events_critiques = guard.get_forex_factory_news(actif)
-    sentiment_global = guard.fecth_cnn_index()
+    sentiment_global = guard.fetch_cnn_index()
     
     # 2. Récupération Géo (Via le flux RSS Investing.com)
     # On passe le sentiment CNN pour que l'IA puisse contextualiser les alertes
