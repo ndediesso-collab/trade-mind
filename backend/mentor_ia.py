@@ -196,40 +196,43 @@ class MarketGuard:
             return {"adr_moyenne": 0.002, "dernier_high": 0, "dernier_low": 0}
 
     def get_forex_factory_news(self, actif):
-        """Récupère l'intégralité des news (Lun-Ven) via le flux miroir sécurisé avec cache 1h."""
+        """Récupère les news du jour via le flux miroir avec cache 1h."""
         url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
         
-        # --- VÉRIFICATION DU CACHE ---
+        # 1. VÉRIFICATION DU CACHE
         cache = self.storage["market_data"].get("forex_factory")
         if cache and (time.time() - cache["timestamp"] < 3600):
-            return cache["data"]
-
-        all_events = []
-        try:
-            response = self.session.get(url, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Filtrage Lundi (0) à Vendredi (4)
-                for event in data:
-                    try:
-                        date_part = event.get('date', '').split('T')[0]
-                        if datetime.strptime(date_part, '%Y-%m-%d').weekday() <= 4:
-                            all_events.append(event)
-                    except:
-                        continue
-                
-                # Stockage dans le cache pour éviter les appels inutiles (avec timestamp)
-                self.storage["market_data"]["forex_factory"] = {"data": all_events, "timestamp": time.time()}
-                return all_events
-                
-            else:
-                print(f"❌ Erreur Forex Factory : {response.status_code}")
+            all_events = cache["data"]
+        else:
+            # 2. APPEL API SI CACHE ABSENT/EXPIRÉ
+            try:
+                response = self.session.get(url, timeout=10)
+                if response.status_code == 200:
+                    all_events = response.json()
+                    self.storage["market_data"]["forex_factory"] = {
+                        "data": all_events, 
+                        "timestamp": time.time()
+                    }
+                else:
+                    print(f"❌ Erreur Forex Factory : {response.status_code}")
+                    return []
+            except Exception as e:
+                print(f"❌ Erreur de connexion Forex Factory : {e}")
                 return []
+
+        # 3. FILTRAGE : Ne garder que les événements de AUJOURD'HUI
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        daily_events = []
+        
+        for event in all_events:
+            try:
+                date_part = event.get('date', '').split('T')[0]
+                if date_part == today_str:
+                    daily_events.append(event)
+            except:
+                continue
                 
-        except Exception as e:
-            print(f"❌ Erreur de connexion Forex Factory : {e}")
-            return []
+        return daily_events
         
     def get_geopolitical_news(self, actif, mode="SCALP"):
         """
