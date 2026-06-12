@@ -476,7 +476,29 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         "Institutionnel": "Froid, professionnel. Analyse le trade comme un coût d'opportunité."
     }
 
-    # 3. LOGIQUE DE SÉLECTION DU MODE (SQUELETTE DYNAMIQUE)
+    # 3. LOGIQUE DE GESTION DES DONNÉES (FAILSAFE)
+    news_list = market_data.get('news', [])
+    
+    if not news_list:
+        instructions_macro = """
+        [⚠️ NOTE IMPORTANTE : Flux calendrier économique (Forex Factory) temporairement indisponible.]
+        
+        Ta capacité d'analyse macro est restreinte sur ce flux spécifique. 
+        Pour compenser et maintenir une analyse de haute qualité, tu DOIS :
+        1. Utiliser le sentiment FEAR & GREED (CNN) fourni pour jauger le stress du marché.
+        2. Analyser les news GÉOPOLITIQUES fournies.
+        3. Intégrer strictement le contexte macroéconomique fourni par l'utilisateur.
+        4. Analyser la structure technique avec prudence.
+        
+        NOTE FINALE : Ajoute un avertissement (WARNING) visible à la fin de ton analyse 
+        précisant que les données du calendrier économique Forex Factory étaient 
+        indisponibles et que le trader doit rester vigilant sur les annonces 
+        macro imprévues.
+        """
+    else:
+        instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_list)}"
+
+    # 4. LOGIQUE DE SÉLECTION DU MODE (SQUELETTE DYNAMIQUE)
     mode_upper = mode.upper()
     
     if mode_upper == "DAILY":
