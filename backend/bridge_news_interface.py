@@ -24,7 +24,7 @@ class BridgeNewsInterface:
         alert_msg = "⚠️ [FLASH INFO MARCHÉ - EXHAUSTIF]"
         
         # Ajout du score CNN
-        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment.get('score', 'N/A')}/100"
+        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment_data.get('score', 'N/A')}/100"
         
         # Bloc Macro
         if isinstance(macro_events, list) and len(macro_events) > 0:
@@ -34,7 +34,7 @@ class BridgeNewsInterface:
                 titre = event.get('title', str(event)) if isinstance(event, dict) else str(event)
                 alert_msg += f"\n• {titre}"
         else:
-            alert_msg += "\n\n📊 MACRO: Aucune donnée disponible."
+            alert_msg += "\n\n📊 MACRO: Aucune donnée disponible. Veuillez vérifier directement sur le site officielle de forex factory."
             
         # Bloc Géo
         if isinstance(geo_news, list) and len(geo_news) > 0:

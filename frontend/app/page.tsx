@@ -76,21 +76,23 @@ export default function Home() {
       
       console.log("Données reçues du backend :", data);
       
-      setIntel({
-        fearGreed: {
-            score: data.fear_greed?.score ?? 50,
-            // On vérifie 'rating' OU 'label' pour être sûr de ne rien rater
-            rating: data.fear_greed?.rating ?? data.fear_greed?.label ?? 'NEUTRAL'
-        },
-        news: data.news_feed
-      });
+      // On met à jour l'état uniquement si on reçoit une réponse valide
+      if (data && data.fear_greed) {
+        setIntel({
+          fearGreed: {
+            // Supprimé le ?? 50 : si le score arrive, il s'affiche.
+            score: data.fear_greed.score, 
+            rating: data.fear_greed.rating ?? data.fear_greed.label ?? 'NEUTRAL'
+          },
+          news: data.news_feed
+        });
+      }
     } catch (e) {
       console.error("Erreur de synchro :", e);
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     syncIntelligence();
     const interval = setInterval(syncIntelligence, 60000);
@@ -112,7 +114,7 @@ export default function Home() {
     { name: 'Investor Mode', path: '/investor', desc: 'Gestion de portefeuille moyen & long terme' },
   ];
 
-  const currentScore = intel?.fearGreed?.score ?? 50;
+  const currentScore = intel?.fearGreed?.score;
   const currentRating = intel?.fearGreed?.rating ?? 'NEUTRAL';
 
   return (
