@@ -4,43 +4,50 @@ from datetime import datetime
 
 class BridgeNewsInterface:
     def __init__(self):
-        # Initialisation propre du moteur de données
         self.guard = MarketGuard()
 
-    def get_live_alerts(self, actif, mode):
-        # Si on veut TOUT le marché, on ne filtre pas par actif
-        # On définit une constante ou un mot-clé spécial pour le GLOBAL
+    def get_live_alerts(self, actif, mode="SCALP"):
+        """
+        Récupère et affiche ABSOLUMENT TOUT : CNN, Macro, et Géopolitique.
+        Sans aucun filtrage ni restriction.
+        """
         cible = None if actif in ["GLOBAL", "ALL", "MARKET"] else actif
         
-        # 1. Récupération (On passe 'cible' qui peut être None)
+        # 1. Récupération exhaustive
+        # CNN (Fear & Greed)
+        sentiment_data = self.guard.get_sentiment_data()
+        # Macro (Forex Factory)
         macro_events = self.guard.get_forex_factory_news(cible)
+        # Géo (Flux RSS 10 news)
         geo_news = self.guard.get_geopolitical_news(cible, mode=mode)
         
-        # 3. Vérification s'il y a quelque chose à afficher
-        if not macro_events and not geo_news:
-            return None
-            
-        # 4. Formatage exhaustif (Affichage de TOUTES les news)
-        alert_msg = "⚠️ [FLASH INFO MARCHÉ]"
+        alert_msg = "⚠️ [FLASH INFO MARCHÉ - EXHAUSTIF]"
         
-        # Bloc Macro
+        # 2. Ajout du score CNN (Obligatoire)
+        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment_data.get('score', 'N/A')}/100"
+        
+        # 3. Bloc Macro (Tout le calendrier)
         if macro_events:
-            alert_msg += "\n\n📊 MACRO (Calendrier):"
+            alert_msg += "\n\n📊 MACRO (Calendrier complet):"
             for event in macro_events:
-                # Nettoyage rapide pour ne pas saturer l'affichage
-                alert_msg += f"\n• {event[:60]}..." if len(event) > 60 else f"\n• {event}"
+                titre = event.get('title', str(event))
+                alert_msg += f"\n• {titre}"
+        else:
+            alert_msg += "\n\n📊 MACRO: Aucun événement trouvé."
         
-        # Bloc Géopolitique
+        # 4. Bloc Géo (Toutes les news, même les [INFO] neutres)
         if geo_news:
-            alert_msg += "\n\n🌍 GÉOPOLITIQUE:"
+            alert_msg += "\n\n🌍 GÉOPOLITIQUE & MARCHÉ (Liste complète):"
             for news in geo_news:
                 alert_msg += f"\n• {news}"
+        else:
+            alert_msg += "\n\n🌍 GÉOPOLITIQUE: Aucune news trouvée."
             
         return alert_msg
 
     def get_market_context(self, actif):
         """
-        Méthode utilitaire pour envoyer tout le contexte à ton IA principale
-        lors de la prise de décision.
+        Envoie TOUT le contexte brut à l'IA pour analyse.
         """
+        # Utilise l'orchestrateur qui centralise tout
         return self.guard.preparer_contexte_marche(actif)

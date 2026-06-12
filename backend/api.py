@@ -335,33 +335,35 @@ async def delete_trade(trade_id: int, token: str = Depends(verifier_session_term
 from engines.market import MarketEngine  # Import ajouté
 
 @app.get("/market/intelligence")
-async def route_market_intel(token: str = Depends(verifier_session_terminal)):
-    # Initialisation propre
+async def route_market_intel(
+    actif: str = "EURUSD", 
+    mode: str = "SWING", 
+    token: str = Depends(verifier_session_terminal)
+):
+    """
+    Route optimisée pour retourner le sentiment réel (CNN) et le feed exhaustif.
+    """
+    # Initialisation de la réponse
     resp = {
         "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
         "news_feed": "Recherche d'actualités en temps réel..."
     }
 
-    # 1. RÉCUPÉRATION DU SENTIMENT RÉEL
-    try:
-        engine = MarketEngine()
-        regime = engine.analyze_regime()
-        # On extrait le score réel si disponible, sinon on garde 50
-        resp["fear_greed"] = {
-            "score": 50, # À remplacer par ta logique réelle de récupération de score si dispo
-            "rating": regime.get("environment", "STABLE")
-        }
-    except Exception as e:
-        logging.error(f"Erreur Sentiment: {e}")
-
-    # 2. RÉCUPÉRATION DES NEWS (Forçage de fraîcheur)
+    # 1. RÉCUPÉRATION DU SENTIMENT RÉEL (Méthode officielle)
     try:
         bridge = BridgeNewsInterface()
-        # Si ton bridge a une méthode pour forcer le refresh, on l'appelle ici
-        if hasattr(bridge, 'refresh'):
-            bridge.refresh()
-            
-        news_raw = bridge.get_live_alerts("EURUSD", "SWING")
+        # Appel à la méthode officielle via le guard du bridge
+        sentiment = bridge.guard.fetch_cnn_index()
+        resp["fear_greed"] = sentiment
+    except Exception as e:
+        logging.error(f"Erreur Sentiment (CNN): {e}")
+
+    # 2. RÉCUPÉRATION DES NEWS (Exhaustives)
+    try:
+        bridge = BridgeNewsInterface()
+        # On passe actif et mode dynamiquement
+        news_raw = bridge.get_live_alerts(actif, mode)
+        
         if news_raw:
             resp["news_feed"] = news_raw
         else:

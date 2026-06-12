@@ -75,11 +75,12 @@ export default function SwingAnalysis() {
       </div>
     );
   };
+  
 
   // --- ÉTATS GÉNÉRAUX & IDENTITY ---
   const [mode, setMode] = useState("Étudiant");
-  const [statut, setStatut] = useState("Brouillon");
-  const [position, setPosition] = useState("Neutre");
+  const [position, setPosition] = useState<"ACHAT" | "VENTE" | "NEUTRE">("NEUTRE");
+  const [statut, setStatut] = useState<"BROUILLON" | "WIN" | "LOSS">("BROUILLON");
   const [actif, setActif] = useState("");
   const [analyse, setAnalyse] = useState("");
   const [iaFeedback, setIaFeedback] = useState("> MENTOR_IA: Système prêt. En attente de votre saisie structurée.");
@@ -272,6 +273,10 @@ export default function SwingAnalysis() {
   };
 
   // --- HANDLERS CONTROLES ---
+  const updateStatut = (newStatut: "BROUILLON" | "WIN" | "LOSS") => {
+  if (statut !== "BROUILLON") return; // Empêche le changement si déjà classé
+  setStatut(newStatut);
+  };
   const handleAnalyse = async () => {
     if (!analyse || !actif) {
       setIaFeedback("> ERREUR: L'actif et le texte de l'analyse sont requis.");
@@ -328,10 +333,10 @@ export default function SwingAnalysis() {
   };
 
   const handleSave = async () => {
-    if (!actif || !analyse) {
-      setIaFeedback("> ERREUR: Impossible d'archiver un canevas vide.");
-      return;
-    }
+  if (statut !== "BROUILLON") {
+     setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
+     return;
+  }
     setIaFeedback("> SYSTÈME: Injection SQL en cours...");
     try {
       const res = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
@@ -452,61 +457,79 @@ export default function SwingAnalysis() {
         </header>
 
         {/* 2. BARRE TECHNIQUE (DATA PRO HUB) */}
-        <section className="p-4 mb-3 bg-[#0F1117]/95 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-2xl relative overflow-hidden">
+        <section className="p-4 mb-3 bg-[#0F1117]/95 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 h-full w-[2px] bg-blue-500" />
           
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-zinc-900 rounded-xl border border-white/5 text-blue-400"><LineChart size={16} /></div>
-            <div className="flex flex-col font-sans">
-              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Actif [Forex Only]</span>
-              <input value={actif} onChange={(e) => setActif(e.target.value.toUpperCase())} placeholder="EURUSD" className="w-32 bg-transparent text-sm font-black text-blue-400 focus:outline-none placeholder:text-zinc-800 tracking-widest uppercase mt-0.5" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6 border-l border-white/5 pl-6">
-            <div className="flex flex-col font-sans">
-              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Prix d&apos;Entrée</span>
-              <input type="number" step="0.0001" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} placeholder="1.0850" className="w-24 bg-transparent text-sm font-mono font-bold text-white focus:outline-none mt-0.5" />
+          {/* BLOC 1: ACTIF & PRIX */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-zinc-900 rounded-xl border border-white/5 text-blue-400"><LineChart size={16} /></div>
+              <div className="flex flex-col font-sans">
+                <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Actif</span>
+                <input value={actif} onChange={(e) => setActif(e.target.value.toUpperCase())} placeholder="EURUSD" className="w-20 bg-transparent text-sm font-black text-blue-400 focus:outline-none placeholder:text-zinc-800 tracking-widest uppercase mt-0.5" />
+              </div>
             </div>
 
-            <div className="flex flex-col font-sans">
-              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Stop Loss (SL)</span>
-              <input type="number" step="0.0001" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} placeholder="1.0800" className="w-24 bg-transparent text-sm font-mono font-bold text-red-400 focus:outline-none mt-0.5" />
-            </div>
-
-            <div className="flex flex-col font-sans">
-              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Take Profit (TP)</span>
-              <input type="number" step="0.0001" value={takeProfit} onChange={(e) => setTakeProfit(e.target.value)} placeholder="1.0950" className="w-24 bg-transparent text-sm font-mono font-bold text-green-400 focus:outline-none mt-0.5" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 border-l border-white/5 pl-6 font-sans">
-            <div className="flex flex-col text-left">
-              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Ratio Risque/Récompense</span>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-base font-mono font-black ${calculatedRR && calculatedRR >= 2 ? "text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.3)]" : "text-zinc-400"}`}>
-                  {calculatedRR !== null ? `1:${calculatedRR}` : "N/A"}
-                </span>
-                {calculatedRR !== null && calculatedRR < 2 && (
-                  <span className="text-[8px] px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded font-black uppercase tracking-tighter flex items-center gap-1"><Lock size={10}/> Invalide (&lt;1:2)</span>
-                )}
-                {calculatedRR !== null && calculatedRR >= 2 && (
-                  <span className="text-[8px] px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded font-black uppercase tracking-tighter">Validé</span>
-                )}
+            <div className="flex items-center gap-4 border-l border-white/5 pl-4">
+              <div className="flex flex-col"><span className="text-[8px] font-black uppercase text-zinc-500">Entrée</span>
+                <input type="number" step="0.0001" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} className="w-20 bg-transparent text-sm font-mono font-bold text-white focus:outline-none" placeholder="1.0850" />
+              </div>
+              <div className="flex flex-col"><span className="text-[8px] font-black uppercase text-zinc-500">SL</span>
+                <input type="number" step="0.0001" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} className="w-20 bg-transparent text-sm font-mono font-bold text-red-400 focus:outline-none" placeholder="1.0800" />
+              </div>
+              <div className="flex flex-col"><span className="text-[8px] font-black uppercase text-zinc-500">TP</span>
+                <input type="number" step="0.0001" value={takeProfit} onChange={(e) => setTakeProfit(e.target.value)} className="w-20 bg-transparent text-sm font-mono font-bold text-green-400 focus:outline-none" placeholder="1.0950" />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col flex-1 max-w-[200px] border-l border-white/5 pl-6 font-sans">
-            <div className="flex justify-between text-[8px] font-black uppercase text-zinc-500 tracking-wider">
-              <span>Conviction</span>
-              <span className={`${conviction > 70 ? 'text-yellow-400' : conviction < 50 ? 'text-red-400' : 'text-blue-400'}`}>{conviction}%</span>
+          {/* BLOC 2: CONTRÔLES DYNAMIQUES */}
+          <div className="flex items-center gap-4 border-l border-white/5 pl-6">
+            {/* Direction */}
+            <div className="flex bg-black/40 p-1 rounded-lg border border-white/5">
+              <button onClick={() => setPosition("ACHAT")} className={`px-3 py-1 text-[8px] font-black uppercase rounded-md transition-all ${position === "ACHAT" ? "bg-green-600 text-white" : "text-zinc-600 hover:text-zinc-400"}`}>Achat</button>
+              <button onClick={() => setPosition("VENTE")} className={`px-3 py-1 text-[8px] font-black uppercase rounded-md transition-all ${position === "VENTE" ? "bg-red-600 text-white" : "text-zinc-600 hover:text-zinc-400"}`}>Vente</button>
             </div>
-            <input type="range" min="0" max="100" value={conviction} onChange={(e) => setConviction(parseInt(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-blue-600 mt-2" />
+
+            {/* Statut Trade */}
+            <div className="flex gap-1">
+              {(["BROUILLON", "WIN", "LOSS"] as const).map((s) => (
+                <button 
+                  key={s}
+                  onClick={() => statut === "BROUILLON" && setStatut(s)}
+                  disabled={statut !== "BROUILLON" && s !== statut}
+                  className={`px-3 py-1.5 text-[8px] font-black uppercase rounded-lg border transition-all ${
+                    statut === s 
+                      ? (s === "WIN" ? "bg-green-600/20 border-green-500 text-green-400" : s === "LOSS" ? "bg-red-600/20 border-red-500 text-red-400" : "bg-zinc-800 border-zinc-600 text-zinc-300")
+                      : "bg-transparent border-transparent text-zinc-700 hover:text-zinc-400"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
-          
-          <button onClick={() => setShowCalc(true)} className="p-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl transition-all"><Calculator size={16} /></button>
-        </section>
+
+          {/* BLOC 3: RISQUE & CALCULATEUR */}
+          <div className="flex items-center gap-4 border-l border-white/5 pl-6">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black uppercase text-zinc-500">RR</span>
+              <span className={`text-base font-mono font-black ${calculatedRR && calculatedRR >= 2 ? "text-green-400" : "text-zinc-400"}`}>
+                {calculatedRR !== null ? `1:${calculatedRR}` : "N/A"}
+              </span>
+            </div>
+            
+            <div className="flex flex-col w-24">
+              <div className="flex justify-between text-[8px] font-black uppercase text-zinc-500">
+                <span>Conviction</span>
+                <span className={conviction > 70 ? 'text-yellow-400' : 'text-blue-400'}>{conviction}%</span>
+              </div>
+              <input type="range" min="0" max="100" value={conviction} onChange={(e) => setConviction(parseInt(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-blue-600 mt-1" />
+            </div>
+            
+            <button onClick={() => setShowCalc(true)} className="p-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl transition-all"><Calculator size={16} /></button>
+          </div>
+    </section>
 
         {/* 3. BLOC CENTRAL DE TRAVAIL */}
         <div className="flex h-[45%] gap-4 mb-3 min-h-0">

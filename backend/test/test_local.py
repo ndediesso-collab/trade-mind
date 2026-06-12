@@ -1,45 +1,64 @@
 import sys
 import os
 import requests
+import feedparser  # <-- Import manquant ajouté
+from datetime import datetime
+
+# Configuration du chemin pour trouver mentor_ia
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(backend_path)
+
+# Maintenant il devrait trouver mentor_ia
 from mentor_ia import MarketGuard
 
-# Ajustement du path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+def get_geopolitical_news(actif, mode="SCALP"):
+    """
+    Récupère 10 news récentes. Si un mot-clé est détecté, la news est taguée en ALERTE.
+    """
+    KEYWORDS = [
+        'War', 'Geopolitical', 'Sanctions', 'Tension', 'Conflict', 'Middle East', 'Ukraine', 'Trade War', 'Crisis', 'Embargo',
+        'Russia', 'China', 'Taiwan', 'Israel', 'Iran', 'Gaza', 'Terrorism', 'Border', 'Defense', 'NATO', 'Diplomacy',
+        'Military', 'Attack', 'Invasion', 'Treaty', 'Bilateral', 'Geopolitical Risk', 'Nuclear',
+        'FED', 'ECB', 'BOC', 'BOJ', 'Rate', 'Interest Rate', 'Inflation', 'CPI', 'PPI', 'Jobs', 'Payroll', 'Unemployment',
+        'Recession', 'Slowdown', 'GDP', 'Growth', 'Yield', 'Treasury', 'Bond', 'Monetary Policy', 'Tightening', 'Easing',
+        'Hike', 'Cut', 'Hawkish', 'Dovish', 'Liquidity', 'Default', 'Debt', 'Fiscal', 'Stimulus', 'Deficit',
+        'Oil', 'Gold', 'Energy', 'Gas', 'Commodity', 'Supply Chain', 'Shortage', 'Blackout', 'Volatility', 'Crash',
+        'S&P', 'Dow Jones', 'Nasdaq', 'Nvidia', 'Tech', 'Stock', 'Share', 'Bankruptcy', 'Earnings', 'Outlook', 'Guidance',
+        'Corporate', 'Merger', 'Acquisition', 'Profit', 'Revenue', 'Margin', 'Downgrade', 'Upgrade', 'Liquidation',
+        'Cyberattack', 'Data Breach', 'Leak', 'Investigation', 'Probe', 'Scandal', 'Fraud', 'SEC', 'Regulation', 
+        'Compliance', 'Lawsuit', 'Strike', 'Union', 'Labor', 'Protest', 'Unrest', 'Election', 'Policy', 'Executive', 
+        'Central Bank', 'Currency', 'Devaluation', 'Peg', 'Intervention', 'Volatility Spike', 'Panic', 'Selloff'
+    ]
 
-def test_tous_les_services(actif):
-    print(f"\n--- LANCEMENT DES TESTS POUR : {actif} ---")
-    guard = MarketGuard()
-    
-    # 1. TEST CALENDRIER (SÉCURISÉ)
-    print("\n⏳ Test Calendrier...")
     try:
-        # Appel correct sur l'instance guard
-        resultats = guard.get_forex_factory_news(actif)
-        if resultats:
-            print(f"✅ Succès ! {len(resultats)} événements trouvés.")
-        else:
-            print("⚠️ Aucune donnée (Source peut-être bloquée/vide).")
-    except Exception as e:
-        print(f"❌ Erreur calendrier : {e}")
-
-    # 2. TEST SENTIMENT CNN (PÉPITE)
-    print("\n⏳ Test Sentiment CNN...")
-    try:
+        url = "https://fr.investing.com/rss/news_285.rss"
         headers = {'User-Agent': 'Mozilla/5.0'}
-        url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=10)
         
-        if response.status_code == 200:
-            data = response.json().get('fear_and_greed', {})
-            score = data.get('score')
-            if score is not None:
-                print(f"✅ Succès CNN ! Score arrondi : {int(round(float(score)))}")
-            else:
-                print("⚠️ Format JSON inattendu.")
-        else:
-            print(f"⚠️ Erreur CNN : {response.status_code}")
-    except Exception as e:
-        print(f"❌ Erreur connexion CNN : {e}")
+        feed = feedparser.parse(response.content)
+        news_list = []
+        
+        for entry in feed.entries:
+            title = entry.title.replace('"', "'")
+            
+            # Vérification si le titre contient un mot-clé
+            is_alert = any(k.lower() in title.lower() for k in KEYWORDS)
+            
+            # Taggage automatique : [ALERTE] ou [INFO]
+            prefixe = "⚠️ [ALERTE]" if is_alert else "🌍 [INFO]"
+            news_list.append(f"{prefixe}[{mode}] {title}")
+            
+            if len(news_list) >= 10:
+                break
+        
+        return news_list
 
+    except Exception as e:
+        return [f"❌ Erreur flux RSS: {e}"]
+
+# --- TEST D'EXÉCUTION ---
 if __name__ == "__main__":
-    test_tous_les_services()
+    print("--- TEST FONCTION GÉOPOLITIQUE ---")
+    results = get_geopolitical_news("EURUSD")
+    for news in results:
+        print(news)

@@ -91,91 +91,27 @@ class MarketGuard:
 
     # --- MODULE : FEAR & GREED (Sentiment) ---
 
-    def fetch_cnn_index(self):
-        url = "https://production.dataviz.cnn.io/index/feargreed/static/severity"
+    def fecth_cnn_index():
+        print("\n--- TEST : RÉCUPÉRATION CNN (MODE NAVIGATEUR) ---")
         try:
-            # Timeout réduit à 5s pour ne pas bloquer tout ton backend si CNN rame
-            response = curl_requests.get(url, impersonate="chrome120", timeout=5)
-            response.raise_for_status()
-            data = response.json()
+            # Utilisation de la même logique de session et headers stricts
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+                'Referer': 'https://edition.cnn.com/',
+            })
             
-            now = data.get('fear_and_greed_index', {}).get('now', {})
+            url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+            response = session.get(url, timeout=5)
             
-            return {
-                "score": round(float(now.get('score', 50))),
-                "rating": now.get('rating', 'Neutral').upper(),
-                "label": f"{now.get('rating', 'Neutral').upper()} ({round(float(now.get('score', 50)))}/100)"
-            }
-        except Exception as e:
-            # Affiche le type d'erreur pour savoir si c'est un timeout ou une erreur TLS
-            logger.error(f"CNN Error: {str(e)}")
-            return {"score": 50, "rating": "NEUTRAL", "label": "Indisponible"}
-
-    def fetch_cnn_index(self):
-        """
-        Récupère les données CNN via l'API sécurisée.
-        Cette méthode est appelée par get_sentiment_data.
-        """
-        url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Referer': 'https://edition.cnn.com/',
-        }
-        
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                fng = data.get('fear_and_greed', {})
-                
-                score_brut = fng.get('score')
-                # On retourne un dictionnaire propre que ton frontend pourra utiliser
-                return {
-                    "score": int(round(float(score_brut))) if score_brut is not None else 50,
-                    "rating": fng.get('rating', 'NEUTRAL'),
-                    "raw_score": float(score_brut) if score_brut is not None else 50.0
-                }
+                score = data['fear_and_greed']['score']
+                print(f"✅ Succès CNN ! Score : {int(round(float(score)))}")
+            else:
+                print(f"⚠️ Erreur CNN : Statut {response.status_code}")
         except Exception as e:
-            logger.error(f"Erreur lors de l'appel API CNN : {e}")
-            
-        # Valeur par défaut en cas d'échec pour ne pas casser l'affichage
-        return {"score": 50, "rating": "NEUTRAL", "raw_score": 50.0}
-
-    # --- MODULE : POLYGON (Prix & Snapshot) ---
-
-    def get_market_snapshot(self, ticker):
-        """Récupère l'état via YFinance avec un cache spécifique par actif."""
-        ticker_key = f"market_data_{ticker.replace('/', '_')}" # Clé unique par actif
-        
-        # 1. Vérification du cache spécifique
-        if self._est_valide(ticker_key):
-            return self.storage[ticker_key]["data"]
-
-        try:
-            # 2. Utilisation de fast_info pour la performance (évite de charger tout l'historique)
-            ticker_yf = self._formater_ticker(ticker)
-            stock = yf.Ticker(ticker_yf)
-            
-            # On récupère les données de marché en une seule fois
-            info = stock.fast_info
-            
-            snapshot = {
-                "ticker": ticker,
-                "price": float(info['last_price']),
-                "open": float(info['open']),
-                "high": float(info['day_high']),
-                "low": float(info['day_low']),
-                "volatility": float(info['day_high'] - info['day_low']),
-                "timestamp": time.time()
-            }
-            
-            # 3. Mise en cache avec la clé unique
-            self.storage[ticker_key] = {"data": snapshot, "timestamp": time.time()}
-            return snapshot
-            
-        except Exception as e:
-            print(f"❌ Erreur Snapshot pour {ticker}: {e}")
-            return None
+            print(f"❌ Erreur CNN : {e}")
 
     def get_last_price(self, ticker):
         """Récupération ultra-rapide du prix."""
@@ -252,107 +188,103 @@ class MarketGuard:
             return {"adr_moyenne": 0.002, "dernier_high": 0, "dernier_low": 0}
 
     def get_forex_factory_news(self, actif):
-        """Récupère les news High/Medium Impact, robuste face aux erreurs XML."""
-        if self._est_valide("market_data") and self.storage["market_data"].get("forex_factory"):
-            return self.storage["market_data"]["forex_factory"]["data"]
+        """Récupère l'intégralité des news (Lun-Ven) via le flux miroir sécurisé avec cache 1h."""
+        url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+        
+        # --- VÉRIFICATION DU CACHE ---
+        cache = self.storage["market_data"].get("forex_factory")
+        if cache and (time.time() - cache["timestamp"] < 3600):
+            return cache["data"]
 
-        url_calendar = "https://www.forexfactory.com/ffcal_week_this.xml"
+        all_events = []
         try:
-            response = self.session.get(url_calendar, timeout=10)
-            
-            # --- CORRECTION ROBUSTE ---
-            # On remplace les caractères spéciaux mal formés par du texte neutre
-            # pour éviter que ET.fromstring ne plante.
-            raw_content = response.content.decode('utf-8', errors='ignore')
-            # Remplacement des entités courantes qui posent problème
-            clean_content = re.sub(r'&(?!(amp|lt|gt|quot|apos);)', '&amp;', raw_content)
-            
-            root = ET.fromstring(clean_content)
-            
-            events_filtres = []
-            paire = actif.replace("/", "").replace(" ", "").upper()
-            devises_concernees = [paire[:3], paire[3:]]
-            maintenant = datetime.utcnow()
-            
-            for event in root.findall('event'):
-                devise = event.find('symbol').text.upper() if event.find('symbol') is not None else ""
-                impact = event.find('impact').text if event.find('impact') is not None else ""
-                title = event.find('title').text if event.find('title') is not None else "News"
+            response = self.session.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
                 
-                date_str = event.find('date').text 
-                time_str = event.find('time').text 
+                # Filtrage Lundi (0) à Vendredi (4)
+                for event in data:
+                    try:
+                        date_part = event.get('date', '').split('T')[0]
+                        if datetime.strptime(date_part, '%Y-%m-%d').weekday() <= 4:
+                            all_events.append(event)
+                    except:
+                        continue
                 
-                dt_event = datetime.strptime(f"{date_str} {time_str}", "%m-%d-%Y %I:%M%p")
+                # Stockage dans le cache pour éviter les appels inutiles (avec timestamp)
+                self.storage["market_data"]["forex_factory"] = {"data": all_events, "timestamp": time.time()}
+                return all_events
                 
-                if dt_event.date() >= maintenant.date() and dt_event.date() <= (maintenant.date() + timedelta(days=1)):
-                    if devise in devises_concernees and impact in ['High', 'Medium']:
-                        status = "✅ PASSÉ" if dt_event < maintenant else "⏳ À VENIR"
-                        events_filtres.append(f"{status} [{dt_event.strftime('%H:%M')}] ⚠️ [{impact}] {devise}: {title}")
-            
-            self.storage["market_data"]["forex_factory"] = {"data": events_filtres, "timestamp": time.time()}
-            return events_filtres
-            
+            else:
+                print(f"❌ Erreur serveur Forex Factory : {response.status_code}")
+                return []
+                
         except Exception as e:
-            print(f"❌ Erreur critique calendrier ForexFactory: {e}")
+            print(f"❌ Erreur de connexion Forex Factory : {e}")
             return []
-
+        
     def get_geopolitical_news(self, actif, mode="SCALP"):
         """
-        Récupère les news géopolitiques via le flux RSS d'Investing.com
-        avec un filtre strict sur les mots-clés à fort impact.
+        Récupère jusqu'à 10 news récentes. Si un mot-clé est détecté, la news est taguée en ALERTE.
         """
-        # Liste des mots-clés qui doivent déclencher une alerte pour l'IA
-        KEYWORDS = ['War', 'Geopolitical', 'Sanctions', 'Tension', 'Conflict', 'Middle East', 'Ukraine', 'Trade War']
-        
+        KEYWORDS = [
+            'War', 'Geopolitical', 'Sanctions', 'Tension', 'Conflict', 'Middle East', 'Ukraine', 'Trade War', 'Crisis', 'Embargo',
+            'Russia', 'China', 'Taiwan', 'Israel', 'Iran', 'Gaza', 'Terrorism', 'Border', 'Defense', 'NATO', 'Diplomacy',
+            'Military', 'Attack', 'Invasion', 'Treaty', 'Bilateral', 'Geopolitical Risk', 'Nuclear',
+            'FED', 'ECB', 'BOC', 'BOJ', 'Rate', 'Interest Rate', 'Inflation', 'CPI', 'PPI', 'Jobs', 'Payroll', 'Unemployment',
+            'Recession', 'Slowdown', 'GDP', 'Growth', 'Yield', 'Treasury', 'Bond', 'Monetary Policy', 'Tightening', 'Easing',
+            'Hike', 'Cut', 'Hawkish', 'Dovish', 'Liquidity', 'Default', 'Debt', 'Fiscal', 'Stimulus', 'Deficit',
+            'Oil', 'Gold', 'Energy', 'Gas', 'Commodity', 'Supply Chain', 'Shortage', 'Blackout', 'Volatility', 'Crash',
+            'S&P', 'Dow Jones', 'Nasdaq', 'Nvidia', 'Tech', 'Stock', 'Share', 'Bankruptcy', 'Earnings', 'Outlook', 'Guidance',
+            'Corporate', 'Merger', 'Acquisition', 'Profit', 'Revenue', 'Margin', 'Downgrade', 'Upgrade', 'Liquidation',
+            'Cyberattack', 'Data Breach', 'Leak', 'Investigation', 'Probe', 'Scandal', 'Fraud', 'SEC', 'Regulation', 
+            'Compliance', 'Lawsuit', 'Strike', 'Union', 'Labor', 'Protest', 'Unrest', 'Election', 'Policy', 'Executive', 
+            'Central Bank', 'Currency', 'Devaluation', 'Peg', 'Intervention', 'Volatility Spike', 'Panic', 'Selloff'
+        ]
+
         try:
             url = "https://fr.investing.com/rss/news_285.rss"
-            feed = feedparser.parse(url)
+            # Utilisation de self.session pour rester cohérent avec le reste de MentorIA
+            response = self.session.get(url, timeout=10)
+            
+            feed = feedparser.parse(response.content)
             news_list = []
-            maintenant = datetime.utcnow()
             
             for entry in feed.entries:
-                # 1. Nettoyage et préparation
                 title = entry.title.replace('"', "'")
                 
-                # 2. FILTRE DE PERTINENCE : On ne garde que si le titre contient un mot-clé
-                if not any(k.lower() in title.lower() for k in KEYWORDS):
-                    continue
+                # Vérification si le titre contient un mot-clé
+                is_alert = any(k.lower() in title.lower() for k in KEYWORDS)
                 
-                # 3. FILTRE TEMPOREL : Les dernières 24h
-                dt_pub = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-                age_heures = int((maintenant - dt_pub).total_seconds() // 3600)
+                # Taggage automatique
+                prefixe = "⚠️ [ALERTE]" if is_alert else "🌍 [INFO]"
+                news_list.append(f"{prefixe}[{mode}] {title}")
                 
-                if age_heures < 24:
-                    news_list.append(f"🌍 [GEOPOLITIQUE][{mode}] {title} (Il y a {age_heures}h)")
-                
-                # On limite la liste aux 3 news les plus importantes
-                if len(news_list) >= 3:
+                if len(news_list) >= 10:
                     break
             
-            if not news_list:
-                return ["🌍 Sentiment Géopolitique: Calme (aucune tension majeure détectée)."]
-                
-            return news_list
+            return news_list if news_list else ["🌍 Sentiment Géopolitique: Calme."]
 
         except Exception as e:
             print(f"❌ Erreur flux RSS Géopolitique: {e}")
             return [f"🌍 Sentiment Géopolitique: Flux temporairement indisponible."]
-
+        
     def preparer_contexte_marche(self, actif):
         """
-        Orchestrateur central : Récupère, Filtre, et Synthétise.
+        Orchestrateur central : Récupère, Formate et Synthétise le contexte pour l'IA.
         """
         maintenant = datetime.datetime.utcnow()
         heure_serveur = maintenant.strftime("%H:%M")
         
         # 1. Récupération des données brutes
-        sentiment = self.get_sentiment_data()
+        sentiment = self.fecth_cnn_index()
         news_macro = self.get_forex_factory_news(actif)
         news_geo_brutes = self.get_geopolitical_news(actif)
         
-        # 2. FILTRAGE INTELLIGENT (L'IA trie la "réalité")
-        # On ne garde que ce que l'IA considère comme important
-        news_geo_filtrees = self.filtrer_news_par_ia(news_geo_brutes)
+        # 2. Filtrage intelligent (si tu veux garder ta méthode IA, on la laisse)
+        # Note: Si filtrer_news_par_ia n'est pas nécessaire car ton RSS est déjà filtré, 
+        # tu peux simplifier cette ligne.
+        news_geo_filtrees = self.filtrer_news_par_ia(news_geo_brutes) if hasattr(self, 'filtrer_news_par_ia') else news_geo_brutes
         
         # 3. Mise à jour cache market_data (données techniques)
         if not self._est_valide("market_data"):
@@ -370,86 +302,90 @@ class MarketGuard:
                 "timestamp": time.time()
             }
 
-        # 4. Synthèse finale pour l'IA (Le contexte enrichi)
+        # 4. Synthèse finale pour le Prompt IA
         data = self.storage["market_data"]["data"]
+        
+        # Conversion des listes de news en chaînes lisibles pour l'IA
+        str_news_macro = "\n".join(news_macro) if isinstance(news_macro, list) else str(news_macro)
+        str_news_geo = "\n".join(news_geo_filtrees) if isinstance(news_geo_filtrees, list) else str(news_geo_filtrees)
         
         return {
             "heure_utc": heure_serveur,
             "prix_actuel": data.get("price"),
             "volatilite_atr": data.get("volatility"),
             "adr_data": data.get("adr_stats"),
-            "news_macro": news_macro,       # Calendrier (ForexFactory)
-            "news_geo": news_geo_filtrees,  # Géopolitique (Déjà triée par l'IA)
-            "sentiment_global": sentiment   # CNN/Alternative
+            "contexte_macro": str_news_macro,
+            "contexte_geo": str_news_geo,
+            "sentiment_global": sentiment
         }
 
-    def filtrer_news_par_ia(self, news_list):
-            """
-            Utilise l'IA Analyste pour filtrer les news à fort impact géopolitique.
-            """
-            if not news_list:
+    def filtrer_news_par_ia(self, news_list, sentiment_cnn):
+        """
+        Analyseur multi-sources : Force l'IA à prioriser Macro, Geo, et CNN.
+        """
+        if not news_list:
+            return []
+
+        titres_concat = "\n".join([f"- {t}" for t in news_list])
+        
+        prompt = f"""
+        Tu es un Analyste Financier Senior. Ta mission est de filtrer les news pour un trader professionnel.
+        
+        RÈGLES STRICTES DE SÉLECTION :
+        1. Tu DOIS inclure systématiquement le score CNN Fear & Greed dans ton analyse globale (Score actuel : {sentiment_cnn}).
+        2. Pour le Calendrier Économique (Macro), donne la priorité absolue à : Inflation (CPI/PPI), Taux d'intérêt, Emploi (NFP/Chômage), et PIB.
+        3. Pour la Géopolitique, garde uniquement les news qui impactent directement la stabilité des marchés (conflits, sanctions, tensions majeures).
+        4. Ignore les news mineures (résultats d'entreprises locales, mouvements boursiers sans lien macro).
+        
+        FORMAT DE RÉPONSE :
+        - Renvoie uniquement les titres sélectionnés, un par ligne.
+        - Si aucune news n'est jugée "à fort impact", renvoie uniquement : AUCUNE.
+        
+        DONNÉES À ANALYSER :
+        {titres_concat}
+        """
+
+        try:
+            response = self.client_architect.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Tu es un expert en macroéconomie et risque géopolitique."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1 # Encore plus précis
+            )
+            
+            result = response.choices[0].message.content.strip()
+            
+            if "AUCUNE" in result:
                 return []
-
-            titres_concat = "\n".join([f"- {t}" for t in news_list])
             
-            # Prompt optimisé pour renvoyer une liste exploitable par ton Front-end
-            prompt = f"""
-            Analyse les titres de news financières suivants.
-            Identifie strictement les news ayant un impact géopolitique ou macroéconomique immédiat et majeur.
-            Pour chaque news importante, renvoie le titre original.
-            Si une news n'est pas importante, ignore-la totalement.
-            Ne renvoie que les titres sélectionnés, un par ligne, sans texte additionnel.
-            Si aucune news n'est importante, renvoie uniquement le mot: AUCUNE.
-            
-            Titres à analyser:
-            {titres_concat}
-            """
-
-            try:
-                # Utilisation de ton client dédié à l'architecture/analyse
-                response = self.client_architect.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "system", "content": "Tu es un analyste financier expert en risques géopolitiques."},
-                            {"role": "user", "content": prompt}],
-                    temperature=0.2 # Très bas pour éviter les hallucinations
-                )
+            return [line.strip("- ").strip() for line in result.split('\n') if line.strip()]
                 
-                result = response.choices[0].message.content.strip()
-                
-                if result == "AUCUNE":
-                    return []
-                
-                # On découpe le résultat pour avoir une liste Python propre
-                return [line.strip("- ").strip() for line in result.split('\n') if line.strip()]
-                
-            except Exception as e:
-                print(f"❌ Erreur IA Analyste: {e}")
-                return news_list # Fallback: on renvoie la liste brute si l'IA échoue
+        except Exception as e:
+            print(f"❌ Erreur IA Analyste: {e}")
+            return news_list # Fallback sécurisé
+        
 # ====== LOGIQUE MENTOR =======
 
-def get_news(actif="EURUSD", guard=None):
+def get_news(actif, guard=None):
     """
     Synthèse intelligente qui utilise exclusivement les méthodes
     de MarketGuard (Cache + Flux RSS gratuits).
     """
     if guard is None:
-        # Pas besoin de clés API ici, MarketGuard les gère en interne
-        # si nécessaire ou utilise les flux publics.
         guard = MarketGuard() 
     
     # 1. Données brutes (Forex Factory + CNN)
     events_critiques = guard.get_forex_factory_news(actif)
-    sentiment_global = guard.get_sentiment_data()
+    sentiment_global = guard.fecth_cnn_index()
     
-    # 2. Récupération Géo (Via notre nouveau flux RSS Investing.com)
-    geo_titles = guard.get_geopolitical_news(actif)
+    # 2. Récupération Géo (Via le flux RSS Investing.com)
+    # On passe le sentiment CNN pour que l'IA puisse contextualiser les alertes
+    geo_titles = guard.get_geopolitical_news(actif, sentiment_global.get('score', 50))
     
-    # 3. Récupération Macro (On peut enrichir le calendrier avec des titres de news macro)
-    # Note : Le calendrier Forex Factory contient déjà le 'titre' de la news macro.
-    # C'est redondant de chercher ailleurs.
-    
-    # 4. Construction de la synthèse structurée
-    resultat = f"--- 🎭 INDICE SENTIMENT GLOBAL ---\n{sentiment_global['label']}\n\n"
+    # 3. Construction de la synthèse structurée
+    resultat = f"--- 🎭 INDICE SENTIMENT GLOBAL ---\n{sentiment_global.get('label', 'Neutre')}\n\n"
     
     resultat += "--- 📅 CALENDRIER ÉCONOMIQUE (MACRO) ---\n"
     resultat += "\n".join(events_critiques) if events_critiques else "Aucun événement impactant prévu."
