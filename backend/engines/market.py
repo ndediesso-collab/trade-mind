@@ -1,7 +1,7 @@
 import pytz
 from datetime import datetime
 from typing import Dict, Any
-
+from mentor_ia import MarketGuard
 class MarketEngine:
     """
     Moteur d'analyse temporelle et environnementale du marché.
@@ -10,6 +10,8 @@ class MarketEngine:
     def __init__(self):
         self.timezone = pytz.utc
         self.local_timezone = pytz.timezone("Africa/Libreville") # Fuseau horaire Gabon (UTC+1)
+
+        self.guard = MarketGuard()
 
     def analyze_regime(self) -> Dict[str, Any]:
         """
@@ -45,6 +47,7 @@ class MarketEngine:
             
         # 4. Détection du Pre-Market (30 min avant ouverture NY)
         is_pre_market_ny = 12.5 <= time_float < 13
+        sentiment = self.guard.fetch_cnn_index()
         
         return {
             "NY": ny_status,

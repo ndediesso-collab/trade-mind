@@ -12,6 +12,8 @@ from engines.market import MarketEngine
 import database 
 import mentor_ia 
 import tools_stats 
+from mentor_ia import MarketGuard
+
 
 
 # Importation de l'instance du manager de dashboard (nom du fichier Dashboard.py)
@@ -332,8 +334,6 @@ async def delete_trade(trade_id: int, token: str = Depends(verifier_session_term
 
 # --- ROUTES MARKET --- 
 
-from engines.market import MarketEngine  # Import ajouté
-
 @app.get("/market/intelligence")
 async def route_market_intel(
     actif: str = "EURUSD", 
@@ -341,35 +341,36 @@ async def route_market_intel(
     token: str = Depends(verifier_session_terminal)
 ):
     """
-    Route optimisée pour retourner le sentiment réel (CNN) et le feed exhaustif.
+    Route centralisée pour le dashboard :
+    1. Récupère le sentiment via le Guard officiel.
+    2. Récupère le feed exhaustif via le Bridge.
     """
-    # Initialisation de la réponse
     resp = {
         "fear_greed": {"score": 50, "rating": "NEUTRAL"}, 
         "news_feed": "Recherche d'actualités en temps réel..."
     }
 
-    # 1. RÉCUPÉRATION DU SENTIMENT RÉEL (Méthode officielle)
-    try:
-        bridge = BridgeNewsInterface()
-        # Appel à la méthode officielle via le guard du bridge
-        sentiment = bridge.guard.fetch_cnn_index()
-        resp["fear_greed"] = sentiment
-    except Exception as e:
-        logging.error(f"Erreur Sentiment (CNN): {e}")
+    # Initialisation des outils
+    guard = MarketGuard()
+    bridge = BridgeNewsInterface()
 
-    # 2. RÉCUPÉRATION DES NEWS (Exhaustives)
+    # 1. RÉCUPÉRATION DU SENTIMENT (Via la méthode officielle fetch_cnn_index)
     try:
-        bridge = BridgeNewsInterface()
-        # On passe actif et mode dynamiquement
+        sentiment = guard.fetch_cnn_index()
+        if sentiment:
+            resp["fear_greed"] = sentiment
+    except Exception as e:
+        logging.error(f"Erreur lors de la récupération CNN : {e}")
+
+    # 2. RÉCUPÉRATION DES NEWS (Via le bridge pour le formatage exhaustif)
+    try:
         news_raw = bridge.get_live_alerts(actif, mode)
-        
         if news_raw:
             resp["news_feed"] = news_raw
         else:
             resp["news_feed"] = "Aucune actualité majeure détectée."
     except Exception as e:
-        logging.error(f"Erreur Bridge: {e}")
+        logging.error(f"Erreur lors de la récupération des news via Bridge : {e}")
         resp["news_feed"] = "Impossible de récupérer les flux live."
 
     return resp
