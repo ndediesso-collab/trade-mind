@@ -94,7 +94,6 @@ class MarketGuard:
     def fetch_cnn_index(self):
         print("\n--- TEST : RÉCUPÉRATION CNN (MODE NAVIGATEUR) ---")
         try:
-            # Utilisation de la même logique de session et headers stricts
             session = requests.Session()
             session.headers.update({
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
@@ -106,12 +105,21 @@ class MarketGuard:
             
             if response.status_code == 200:
                 data = response.json()
-                score = data['fear_and_greed']['score']
-                print(f"✅ Succès CNN ! Score : {int(round(float(score)))}")
+                # On arrondit proprement
+                raw_score = float(data['fear_and_greed']['score'])
+                score = int(round(raw_score))
+                rating = data['fear_and_greed']['rating']
+                
+                print(f"✅ Succès CNN ! Score : {score}")
+                
+                # RETOURNE LA DONNÉE ICI !
+                return {"score": score, "rating": rating}
             else:
                 print(f"⚠️ Erreur CNN : Statut {response.status_code}")
+                return None
         except Exception as e:
             print(f"❌ Erreur CNN : {e}")
+            return None
 
     def get_last_price(self, ticker):
         """Récupération ultra-rapide du prix."""
@@ -369,20 +377,20 @@ class MarketGuard:
 # ====== LOGIQUE MENTOR =======
 
 def get_news(actif, guard=None):
-    """
-    Synthèse intelligente qui utilise exclusivement les méthodes
-    de MarketGuard (Cache + Flux RSS gratuits).
-    """
     if guard is None:
         guard = MarketGuard() 
     
-    # 1. Données brutes (Forex Factory + CNN)
+    # 1. Données brutes
     events_critiques = guard.get_forex_factory_news(actif)
     sentiment_global = guard.fetch_cnn_index()
     
-    # 2. Récupération Géo (Via le flux RSS Investing.com)
-    # On passe le sentiment CNN pour que l'IA puisse contextualiser les alertes
-    geo_titles = guard.get_geopolitical_news(actif, sentiment_global.get('score', 50))
+    # 2. Récupération sécurisée du score
+    # Si sentiment_global est un dict, on extrait le score, sinon on passe None
+    cnn_score = sentiment_global.get('score') if isinstance(sentiment_global, dict) else None
+    
+    # 3. Appel avec la valeur réelle (ou None)
+    # L'IA est capable de gérer une absence de score, mais pas un score faux (50)
+    geo_titles = guard.get_geopolitical_news(actif, sentiment=cnn_score)
     
     # 3. Construction de la synthèse structurée
     resultat = f"--- 🎭 INDICE SENTIMENT GLOBAL ---\n{sentiment_global.get('label', 'Neutre')}\n\n"
@@ -421,20 +429,24 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         """
 
     # 4. RÉCUPÉRATION DES DONNÉES (Via l'orchestrateur MarketGuard)
-    
-    guard = MarketGuard()  # On peut créer une instance locale pour l'orchestrateur, pas besoin de la stocker dans app_instance
-    
-    # L'orchestrateur centralise tout : prix, ADR, news et sentiment
+    guard = MarketGuard() 
     market_context = guard.preparer_contexte_marche(actif)
     
-    # Extraction propre des données pour le prompt
     market_data = {
         "prix_actuel": market_context.get("prix_actuel", "N/A"),
         "volatilite": market_context.get("volatilite_atr", "N/A"),
         "adr_stats": market_context.get("adr_data", {}),
         "news": market_context.get("news_macro", []) + market_context.get("news_geo", [])
     }
-    sentiment = market_context.get("sentiment_global", {"score": 50, "rating": "NEUTRAL"})
+    
+    # MODIFICATION ICI :
+    # Si le score n'existe pas dans le contexte, on utilise None au lieu de 50.
+    # L'IA est assez intelligente pour gérer un score "Indisponible" ou None.
+    sentiment = market_context.get("sentiment_global") 
+    
+    # Si tu veux être très propre, tu peux définir une valeur de secours plus honnête :
+    if not sentiment or 'score' not in sentiment:
+        sentiment = {"score": "N/A", "rating": "INDISPONIBLE"}
 
     # RÉCUPÉRATION DES RÉGLAGES UTILISATEUR
     user_settings = app_instance.user_settings
@@ -801,15 +813,15 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     - RR minimum : {rr_min}
     - Sévérité : {severite}
 
-    ═══════════════════════════════
-    DONNÉES MARCHÉ (Connectées API)
-    ═══════════════════════════════
+    # ═══════════════════════════════
+    # DONNÉES MARCHÉ (Connectées API)
+    # ═══════════════════════════════
     - Prix Actuel : {market_data.get('prix_actuel', 'N/A')}
     - Volatilité (ATR 5j) : {market_data.get('volatilite', 'N/A')}
     - Bornes ADR (High/Low) : {market_data.get('adr_stats', {}).get('dernier_high', 'N/A')} / {market_data.get('adr_stats', {}).get('dernier_low', 'N/A')}
     - News (Macro & Géo) : {', '.join(market_data.get('news', [])) if market_data.get('news') else 'Aucune news majeure détectée.'}
-    - Sentiment (Fear & Greed) : {sentiment.get('rating', 'NEUTRAL')} ({sentiment.get('score', 50)}/100)
-
+    - Sentiment (Fear & Greed) : {sentiment.get('rating', 'INDISPONIBLE')} ({sentiment.get('score', 'N/A')}/100)
+    
     ═══════════════════════════════
     TRADE & ANALYSE
     ═══════════════════════════════
