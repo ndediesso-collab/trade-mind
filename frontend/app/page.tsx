@@ -234,7 +234,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* BLOC FUSIONNÉ : GLOBAL MARKET INTELLIGENCE */}
+            {/* BLOC FUSIONNÉ : GLOBAL MARKET INTELLIGENCE (CORRIGÉ) */}
             <div className="col-span-12 md:col-span-6 xl:col-span-3 flex flex-col gap-4 overflow-hidden">
               <div className="bg-zinc-900/20 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl flex flex-col h-full min-h-[500px]">
                 <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
@@ -242,15 +242,11 @@ export default function Home() {
                   <Globe size={13} className="text-zinc-500" />
                 </div>
                 
-                <div className="text-center mb-6">
-                  <div className="text-5xl font-bold text-white mb-1">{currentScore}</div>
-                  <div className={`text-[10px] font-bold uppercase tracking-widest ${currentScore > 50 ? 'text-green-500' : 'text-red-500'}`}>
-                    {currentRating}
-                  </div>
-                </div>
+                {/* ON SUPPRIME LE BLOC <div className="text-center mb-6"> QUI AFFICHAIT LE 50 EN GROS */}
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4 font-sans text-[11px] text-zinc-400">
                   <div className="whitespace-pre-line leading-relaxed italic font-light">
+                    {/* Le score est maintenant DÉJÀ présent dans intel.news grâce à ton Bridge */}
                     {intel.news}
                   </div>
                 </div>

@@ -9,12 +9,12 @@ class BridgeNewsInterface:
     def get_live_alerts(self, actif, mode="SCALP"):
         """
         Récupère et agrège les données CNN, Macro et Géo.
-        Version sécurisée contre les erreurs de type NoneType et erreurs 429.
+        Version sécurisée utilisant la variable de sentiment nettoyée.
         """
         # 1. Récupération sécurisée du sentiment (CNN)
         sentiment_data = self.guard.fetch_cnn_index()
-        # Assurer un format dict par défaut
-        sentiment = sentiment_data if isinstance(sentiment_data, dict) else {"score": 50, "label": "NEUTRAL"}
+        # On crée 'sentiment' comme dictionnaire garanti
+        sentiment = sentiment_data if isinstance(sentiment_data, dict) else {"score": "N/A", "label": "NEUTRAL"}
         
         # 2. Récupération des news (Macro et Géo)
         macro_events = self.guard.get_forex_factory_news(actif)
@@ -23,8 +23,8 @@ class BridgeNewsInterface:
         # 3. Construction de la réponse agrégée
         alert_msg = "⚠️ [FLASH INFO MARCHÉ - EXHAUSTIF]"
         
-        # Ajout du score CNN
-        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment_data.get('score', 'N/A')}/100"
+        # Ajout du score CNN (Utilisation de 'sentiment' sécurisé)
+        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment.get('score', 'N/A')}/100"
         
         # Bloc Macro
         if isinstance(macro_events, list) and len(macro_events) > 0:
@@ -34,7 +34,7 @@ class BridgeNewsInterface:
                 titre = event.get('title', str(event)) if isinstance(event, dict) else str(event)
                 alert_msg += f"\n• {titre}"
         else:
-            alert_msg += "\n\n📊 MACRO: Aucune donnée disponible. Veuillez vérifier directement sur le site officielle de forex factory."
+            alert_msg += "\n\n📊 MACRO: Aucune donnée disponible."
             
         # Bloc Géo
         if isinstance(geo_news, list) and len(geo_news) > 0:
@@ -45,7 +45,7 @@ class BridgeNewsInterface:
             alert_msg += "\n\n🌍 GÉOPOLITIQUE: Aucune news trouvée."
             
         return alert_msg
-
+    
     def get_market_context(self, actif):
         """
         Envoie TOUT le contexte brut à l'IA pour analyse.
