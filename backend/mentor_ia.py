@@ -216,7 +216,7 @@ class MarketGuard:
                 return all_events
                 
             else:
-                print(f"❌ Erreur serveur Forex Factory : {response.status_code}")
+                print(f"❌ Erreur Forex Factory : {response.status_code}")
                 return []
                 
         except Exception as e:

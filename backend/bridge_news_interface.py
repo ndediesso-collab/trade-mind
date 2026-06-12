@@ -8,35 +8,36 @@ class BridgeNewsInterface:
 
     def get_live_alerts(self, actif, mode="SCALP"):
         """
-        Récupère et affiche ABSOLUMENT TOUT : CNN, Macro, et Géopolitique.
-        Sans aucun filtrage ni restriction.
+        Récupère et agrège les données CNN, Macro et Géo.
+        Version sécurisée contre les erreurs de type NoneType et erreurs 429.
         """
-        cible = None if actif in ["GLOBAL", "ALL", "MARKET"] else actif
-        
-        # 1. Récupération exhaustive
-        # CNN (Fear & Greed)
+        # 1. Récupération sécurisée du sentiment (CNN)
         sentiment_data = self.guard.fetch_cnn_index()
-        # Macro (Forex Factory)
-        macro_events = self.guard.get_forex_factory_news(cible)
-        # Géo (Flux RSS 10 news)
-        geo_news = self.guard.get_geopolitical_news(cible, mode=mode)
+        # Assurer un format dict par défaut
+        sentiment = sentiment_data if isinstance(sentiment_data, dict) else {"score": 50, "label": "NEUTRAL"}
         
+        # 2. Récupération des news (Macro et Géo)
+        macro_events = self.guard.get_forex_factory_news(actif)
+        geo_news = self.guard.get_geopolitical_news(actif, mode=mode)
+        
+        # 3. Construction de la réponse agrégée
         alert_msg = "⚠️ [FLASH INFO MARCHÉ - EXHAUSTIF]"
         
-        # 2. Ajout du score CNN (Obligatoire)
-        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment_data.get('score', 'N/A')}/100"
+        # Ajout du score CNN
+        alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment.get('score', 'N/A')}/100"
         
-        # 3. Bloc Macro (Tout le calendrier)
-        if macro_events:
+        # Bloc Macro
+        if isinstance(macro_events, list) and len(macro_events) > 0:
             alert_msg += "\n\n📊 MACRO (Calendrier complet):"
             for event in macro_events:
-                titre = event.get('title', str(event))
+                # Gestion sécurisée du titre
+                titre = event.get('title', str(event)) if isinstance(event, dict) else str(event)
                 alert_msg += f"\n• {titre}"
         else:
-            alert_msg += "\n\n📊 MACRO: Aucun événement trouvé."
-        
-        # 4. Bloc Géo (Toutes les news, même les [INFO] neutres)
-        if geo_news:
+            alert_msg += "\n\n📊 MACRO: Aucune donnée disponible."
+            
+        # Bloc Géo
+        if isinstance(geo_news, list) and len(geo_news) > 0:
             alert_msg += "\n\n🌍 GÉOPOLITIQUE & MARCHÉ (Liste complète):"
             for news in geo_news:
                 alert_msg += f"\n• {news}"

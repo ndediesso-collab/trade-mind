@@ -471,42 +471,64 @@ export default function SwingAnalysis() {
             </div>
 
             <div className="flex items-center gap-4 border-l border-white/5 pl-4">
-              <div className="flex flex-col"><span className="text-[8px] font-black uppercase text-zinc-500">Entrée</span>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase text-zinc-500">Entrée</span>
                 <input type="number" step="0.0001" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} className="w-20 bg-transparent text-sm font-mono font-bold text-white focus:outline-none" placeholder="1.0850" />
               </div>
-              <div className="flex flex-col"><span className="text-[8px] font-black uppercase text-zinc-500">SL</span>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase text-zinc-500">SL</span>
                 <input type="number" step="0.0001" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} className="w-20 bg-transparent text-sm font-mono font-bold text-red-400 focus:outline-none" placeholder="1.0800" />
               </div>
-              <div className="flex flex-col"><span className="text-[8px] font-black uppercase text-zinc-500">TP</span>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase text-zinc-500">TP</span>
                 <input type="number" step="0.0001" value={takeProfit} onChange={(e) => setTakeProfit(e.target.value)} className="w-20 bg-transparent text-sm font-mono font-bold text-green-400 focus:outline-none" placeholder="1.0950" />
               </div>
             </div>
           </div>
 
           {/* BLOC 2: CONTRÔLES DYNAMIQUES */}
-          <div className="flex items-center gap-4 border-l border-white/5 pl-6">
+          <div className="flex items-center gap-6 border-l border-white/5 pl-6">
             {/* Direction */}
-            <div className="flex bg-black/40 p-1 rounded-lg border border-white/5">
-              <button onClick={() => setPosition("ACHAT")} className={`px-3 py-1 text-[8px] font-black uppercase rounded-md transition-all ${position === "ACHAT" ? "bg-green-600 text-white" : "text-zinc-600 hover:text-zinc-400"}`}>Achat</button>
-              <button onClick={() => setPosition("VENTE")} className={`px-3 py-1 text-[8px] font-black uppercase rounded-md transition-all ${position === "VENTE" ? "bg-red-600 text-white" : "text-zinc-600 hover:text-zinc-400"}`}>Vente</button>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Position</span>
+              <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
+                <button 
+                  onClick={() => setPosition("ACHAT")} 
+                  className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-all ${position === "ACHAT" ? "bg-green-500/20 text-green-400 border border-green-500/50" : "text-zinc-600 hover:text-white"}`}>
+                  Achat
+                </button>
+                <button 
+                  onClick={() => setPosition("VENTE")} 
+                  className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-md transition-all ${position === "VENTE" ? "bg-red-500/20 text-red-400 border border-red-500/50" : "text-zinc-600 hover:text-white"}`}>
+                  Vente
+                </button>
+              </div>
             </div>
 
             {/* Statut Trade */}
-            <div className="flex gap-1">
-              {(["BROUILLON", "WIN", "LOSS"] as const).map((s) => (
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">État</span>
+              <div className="flex gap-2">
                 <button 
-                  key={s}
-                  onClick={() => statut === "BROUILLON" && setStatut(s)}
-                  disabled={statut !== "BROUILLON" && s !== statut}
-                  className={`px-3 py-1.5 text-[8px] font-black uppercase rounded-lg border transition-all ${
-                    statut === s 
-                      ? (s === "WIN" ? "bg-green-600/20 border-green-500 text-green-400" : s === "LOSS" ? "bg-red-600/20 border-red-500 text-red-400" : "bg-zinc-800 border-zinc-600 text-zinc-300")
-                      : "bg-transparent border-transparent text-zinc-700 hover:text-zinc-400"
-                  }`}
-                >
-                  {s}
+                  onClick={() => setStatut("BROUILLON")}
+                  className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border transition-all ${statut === "BROUILLON" ? "bg-zinc-800 text-white border-zinc-500" : "bg-transparent text-zinc-600 border-transparent hover:bg-zinc-900"}`}>
+                  Brouillon
                 </button>
-              ))}
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => setStatut("WIN")}
+                    disabled={statut !== "BROUILLON" && statut !== "WIN"}
+                    className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border transition-all ${statut === "WIN" ? "bg-green-600 text-white border-green-500 shadow-[0_0_10px_rgba(22,163,74,0.3)]" : "bg-zinc-900 text-zinc-600 border-transparent hover:bg-zinc-800"}`}>
+                    Win
+                  </button>
+                  <button 
+                    onClick={() => setStatut("LOSS")}
+                    disabled={statut !== "BROUILLON" && statut !== "LOSS"}
+                    className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border transition-all ${statut === "LOSS" ? "bg-red-600 text-white border-red-500 shadow-[0_0_10px_rgba(220,38,38,0.3)]" : "bg-zinc-900 text-zinc-600 border-transparent hover:bg-zinc-800"}`}>
+                    Loss
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -529,7 +551,7 @@ export default function SwingAnalysis() {
             
             <button onClick={() => setShowCalc(true)} className="p-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-xl transition-all"><Calculator size={16} /></button>
           </div>
-    </section>
+        </section>
 
         {/* 3. BLOC CENTRAL DE TRAVAIL */}
         <div className="flex h-[45%] gap-4 mb-3 min-h-0">

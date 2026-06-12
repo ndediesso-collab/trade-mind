@@ -9,6 +9,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
+interface FearGreed {
+  score: number;
+  rating?: string;
+  label?: string; // On ajoute label au cas où ton back envoie ça
+}
+
+interface IntelState {
+  fearGreed: FearGreed;
+  news: string;
+}
 
 // 👑 LOGISTIQUE SUPABASE INTERNE
 import { createClient } from "@/utils/supabase/client"; 
@@ -21,9 +31,9 @@ export default function Home() {
     solusdt: { price: "0.00", change: "0.00" } 
   });
 
-  const [intel, setIntel] = useState({
-    fearGreed: { score: 50, rating: 'NEUTRAL', label: 'Initialisation...' },
-    news: "Chargement du flux MentorIA..."
+  const [intel, setIntel] = useState<IntelState>({
+  fearGreed: { score: 50, rating: 'NEUTRAL' },
+  news: "Chargement du flux MentorIA..."
   });
   const [loading, setLoading] = useState(false);
 
@@ -58,18 +68,20 @@ export default function Home() {
   }, []);
 
   // 2. SYNCHRONISATION MENTOR IA (MarketGuard Bridge)
-  // 2. SYNCHRONISATION MENTOR IA (MarketGuard Bridge)
   const syncIntelligence = async () => {
     setLoading(true);
     try {
       const res = await fetch('https://trade-mind-w6rs.onrender.com/market/intelligence');
       const data = await res.json();
       
-      console.log("Données reçues du backend :", data); // <--- AJOUTE ÇA POUR DÉBUGGER
+      console.log("Données reçues du backend :", data);
       
       setIntel({
-        // Si data.fear_greed existe, utilise-le. Sinon, le système gère l'erreur.
-        fearGreed: data.fear_greed, 
+        fearGreed: {
+            score: data.fear_greed?.score ?? 50,
+            // On vérifie 'rating' OU 'label' pour être sûr de ne rien rater
+            rating: data.fear_greed?.rating ?? data.fear_greed?.label ?? 'NEUTRAL'
+        },
         news: data.news_feed
       });
     } catch (e) {
@@ -77,7 +89,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-};
+  };
 
   useEffect(() => {
     syncIntelligence();
