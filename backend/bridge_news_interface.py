@@ -3,9 +3,11 @@ import os
 from datetime import datetime
 
 class BridgeNewsInterface:
-    def __init__(self):
-        self.guard = MarketGuard()
-
+    def __init__(self, guard_instance=None):
+        # Si on passe une instance, on l'utilise. 
+        # Sinon, on en crée une (pour garder une compatibilité avec ton code actuel)
+        self.guard = guard_instance if guard_instance else MarketGuard()
+        
     def get_live_alerts(self, actif, mode="SCALP"):
         """
         Récupère et agrège les données CNN, Macro et Géo.

@@ -181,7 +181,8 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
         # On le fait AVANT tout, comme ça même si l'IA échoue, l'info arrive.
         alerte_news = ""
         try:
-            bridge = BridgeNewsInterface()
+            shared_guard = MarketGuard()
+            bridge = BridgeNewsInterface(guard_instance=shared_guard)
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
                 alerte_news = f"{alerte}\n\n"
@@ -256,7 +257,8 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
 
         # 2. INJECTION NEWS (Toujours fait)
         try:
-            bridge = BridgeNewsInterface()
+            shared_guard = MarketGuard()
+            bridge = BridgeNewsInterface(guard_instance=shared_guard)
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
                 feedback_ia = f"{alerte}\n\n[ANALYSE IA]\n{feedback_ia}"
@@ -351,18 +353,18 @@ async def route_market_intel(
     }
 
     # Initialisation des outils
-    guard = MarketGuard()
-    bridge = BridgeNewsInterface()
+    shared_guard= MarketGuard()
+    bridge = BridgeNewsInterface(guard_instance=shared_guard)
 
-    # 1. RÉCUPÉRATION DU SENTIMENT (Via la méthode officielle fetch_cnn_index)
+    # 1. RÉCUPÉRATION DU SENTIMENT
     try:
-        sentiment = guard.fetch_cnn_index()
+        sentiment = shared_guard.fetch_cnn_index()
         if sentiment:
             resp["fear_greed"] = sentiment
     except Exception as e:
         logging.error(f"Erreur lors de la récupération CNN : {e}")
 
-    # 2. RÉCUPÉRATION DES NEWS (Via le bridge pour le formatage exhaustif)
+    # 2. RÉCUPÉRATION DES NEWS
     try:
         news_raw = bridge.get_live_alerts(actif, mode)
         if news_raw:
