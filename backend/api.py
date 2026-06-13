@@ -186,6 +186,8 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
                 alerte_news = f"{alerte}\n\n"
+            elif hasattr(mentor_ia, "lancer_analyse"):
+                resultat = mentor_ia.lancer_analyse(...) # <--- ICI    
         except Exception as e:
             logging.error(f"⚠️ Erreur récupération news : {e}")
 

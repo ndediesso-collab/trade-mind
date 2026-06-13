@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import yfinance as yf
 import feedparser 
 from curl_cffi import requests as curl_requests
+from datetime import datetime, timezone
+import time # Si tu l'utilises pour ton timestamp
 
 from dotenv import load_dotenv
 import logging
@@ -24,8 +26,11 @@ print(f"DEBUG: ARCHITECT_KEY trouvé ? {bool(os.getenv('OPENAI_ARCHITECT_KEY'))}
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
+# IA 1 : L'Architecte (Analyse froide)
+client_architect = OpenAI(api_key=os.getenv("OPENAI_ARCHITECT_KEY"))
+
 # IA 2 : Le Guardian (Discipline & Émotion)
-client = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
+client_guardian = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
 
 import time
 import requests
@@ -65,7 +70,7 @@ GUIDES_QUESTIONNAIRES = {
 class MarketGuard:
     def __init__(self):
         # Plus besoin de clé API Polygon
-        self.client_architect = client
+        self.client_architect = client_architect
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MentorIA/1.0"
@@ -73,9 +78,10 @@ class MarketGuard:
         
         # Structure de stockage unifiée et propre
         self.storage = {
-            "market_data": {"data": None, "timestamp": 0},
-            "forex_factory": {"data": None, "timestamp": 0},
-            "sentiment": {"data": None, "timestamp": 0}
+            # Initialise 'data' avec {} au lieu de None
+            "market_data": {"data": {}, "timestamp": 0},
+            "forex_factory": {"data": [], "timestamp": 0},
+            "sentiment": {"data": {}, "timestamp": 0}
         }
         
         # Cache de 5 minutes pour éviter toute limitation inutile des sources gratuites
@@ -87,7 +93,12 @@ class MarketGuard:
         return (time.time() - self.storage[key]["timestamp"]) < self.cache_duration
 
     # --- MODULE : FEAR & GREED (Sentiment) ---
-
+    def _formater_ticker(self, ticker):
+        """Convertit le format de l'actif en format Yahoo Finance."""
+        # Exemple simple : si AUD/NZD, devient AUDNZD=X
+        formatted = ticker.replace('/', '')
+        return f"{formatted}=X"
+    
     def fetch_cnn_index(self):
         print("\n--- TEST : RÉCUPÉRATION CNN (MODE NAVIGATEUR) ---")
         try:
@@ -119,40 +130,50 @@ class MarketGuard:
             return None
 
     def get_last_price(self, ticker):
-        """Récupération ultra-rapide du prix."""
-        ticker_key = f"market_data_{ticker.replace('/', '_')}"
+        """Récupération ultra-rapide du prix via le cache ou yfinance."""
+        CACHE_KEY = "market_data"
         
-        # 1. Vérification du cache
-        if self._est_valide(ticker_key):
-            return self.storage[ticker_key]["data"].get("price")
+        # 1. Vérification du cache unifié
+        if self._est_valide(CACHE_KEY):
+            price = self.storage.get(CACHE_KEY, {}).get("data", {}).get("price")
+            if price:
+                return price
 
-        # 2. Fallback direct si le cache est vide
-        snapshot = self.get_market_snapshot(ticker)
-        return snapshot["price"] if snapshot else None
-
-    def get_volatility_atr(self, ticker):
-        """Récupère le range quotidien avec cache spécifique par actif."""
-        ticker_key = f"daily_stats_{ticker.replace('/', '_')}"
-        
-        # 1. Vérification du cache spécifique
-        if self._est_valide(ticker_key):
-            return self.storage[ticker_key].get("range")
-        
+        # 2. Fallback via YFinance (remplace l'appel inexistant)
         try:
             ticker_yf = self._formater_ticker(ticker)
             stock = yf.Ticker(ticker_yf)
-            hist = stock.history(period="2d")
+            # fast_info est extrêmement rapide pour le prix
+            price = stock.fast_info['last_price']
             
-            if len(hist) < 2: return 0
+            # (Optionnel) Mise à jour du cache pour éviter de refaire l'appel tout de suite
+            return price
+            
+        except Exception as e:
+            print(f"❌ Erreur YFinance Price pour {ticker}: {e}")
+            return None
+
+    def get_volatility_atr(self, ticker):
+        """Récupère le range quotidien via le cache unifié 'market_data'."""
+        CACHE_KEY = "market_data"
+        
+        # 1. Vérification dans le cache unifié
+        data = self.storage.get(CACHE_KEY, {}).get("data", {})
+        if self._est_valide(CACHE_KEY) and data.get("volatility") is not None:
+            return data.get("volatility")
+        
+        # 2. Calcul si cache absent ou invalide
+        try:
+            ticker_yf = self._formater_ticker(ticker)
+            hist = yf.Ticker(ticker_yf).history(period="2d")
+            
+            if len(hist) < 2: 
+                return 0
                 
-            yesterday = hist.iloc[-2]
-            daily_range = float(yesterday['High'] - yesterday['Low'])
+            daily_range = float(hist.iloc[-2]['High'] - hist.iloc[-2]['Low'])
             
-            # 2. Mise en cache avec la clé unique
-            self.storage[ticker_key] = {
-                "range": daily_range,
-                "timestamp": time.time()
-            }
+            # Mise à jour du cache unifié (sans écraser le reste)
+            self.storage[CACHE_KEY]["data"]["volatility"] = daily_range
             return daily_range
             
         except Exception as e:
@@ -160,16 +181,18 @@ class MarketGuard:
             return 0
 
     def get_daily_range_stats(self, ticker):
-        """Calcule l'ADR glissant (5 jours) avec cache propre."""
-        ticker_key = f"adr_stats_{ticker.replace('/', '_')}"
+        """Calcule l'ADR glissant (5 jours) via le cache unifié 'market_data'."""
+        CACHE_KEY = "market_data"
         
-        if self._est_valide(ticker_key):
-            return self.storage[ticker_key]["data"]
+        # 1. Vérification dans le cache unifié
+        data = self.storage.get(CACHE_KEY, {}).get("data", {})
+        if self._est_valide(CACHE_KEY) and data.get("adr_stats"):
+            return data.get("adr_stats")
 
+        # 2. Calcul si cache absent ou invalide
         try:
             ticker_yf = self._formater_ticker(ticker)
             stock = yf.Ticker(ticker_yf)
-            # On demande 6 jours pour avoir une moyenne glissante sur 5 jours complets
             hist = stock.history(period="6d")
             
             if hist.empty or len(hist) < 2:
@@ -184,8 +207,8 @@ class MarketGuard:
                 "dernier_low": float(hist['Low'].iloc[-1])
             }
             
-            # Mise en cache
-            self.storage[ticker_key] = {"data": stats, "timestamp": time.time()}
+            # Mise à jour du cache unifié
+            self.storage[CACHE_KEY]["data"]["adr_stats"] = stats
             return stats
             
         except Exception as e:
@@ -281,7 +304,7 @@ class MarketGuard:
         """
         Orchestrateur central : Récupère, Formate et Synthétise le contexte pour l'IA.
         """
-        maintenant = datetime.datetime.utcnow()
+        maintenant = datetime.now(timezone.utc)
         heure_serveur = maintenant.strftime("%H:%M")
         
         # 1. Récupération des données brutes
@@ -289,18 +312,21 @@ class MarketGuard:
         news_macro = self.get_forex_factory_news(actif)
         news_geo_brutes = self.get_geopolitical_news(actif)
         
-        # 2. Filtrage intelligent (si tu veux garder ta méthode IA, on la laisse)
-        # Note: Si filtrer_news_par_ia n'est pas nécessaire car ton RSS est déjà filtré, 
-        # tu peux simplifier cette ligne.
-        news_geo_filtrees = self.filtrer_news_par_ia(news_geo_brutes) if hasattr(self, 'filtrer_news_par_ia') else news_geo_brutes
+        # 2. Filtrage intelligent (CORRIGÉ ICI)
+        if hasattr(self, 'filtrer_news_par_ia'):
+            # On passe maintenant les DEUX arguments requis par ta fonction
+            news_geo_filtrees = self.filtrer_news_par_ia(news_geo_brutes, sentiment)
+        else:
+            news_geo_filtrees = news_geo_brutes
         
-        # 3. Mise à jour cache market_data (données techniques)
-        if not self._est_valide("market_data"):
+        CACHE_KEY = "market_data"
+        
+        if not self._est_valide(CACHE_KEY):
             prix = self.get_last_price(actif)
             vol = self.get_volatility_atr(actif)
             stats_adr = self.get_daily_range_stats(actif)
             
-            self.storage["market_data"] = {
+            self.storage[CACHE_KEY] = {
                 "data": {
                     "price": prix,
                     "volatility": vol,
@@ -310,8 +336,11 @@ class MarketGuard:
                 "timestamp": time.time()
             }
 
-        # 4. Synthèse finale pour le Prompt IA
-        data = self.storage["market_data"]["data"]
+        # 4. Synthèse finale (Lecture avec la MÊME clé fixe)
+        # On utilise .get() pour éviter le crash si la clé est absente
+        market_cache = self.storage.get(CACHE_KEY, {})
+        data = market_cache.get("data", {})
+
         
         # Conversion des listes de news en chaînes lisibles pour l'IA
         str_news_macro = "\n".join(news_macro) if isinstance(news_macro, list) else str(news_macro)
@@ -964,7 +993,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     """
     
     try:
-        response = client.chat.completions.create(
+        response = client_architect.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : {severite}."}, 
@@ -1202,7 +1231,7 @@ def analyser_compagnon_live(app_instance, message_utilisateur, plan_initial_resu
 
     try:
         # Appel à l'API OpenAI avec le prompt non-simplifié
-        response = client.chat.completions.create(
+        response = client_guardian.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt_officiel},
@@ -1230,7 +1259,7 @@ def synthetiser_plan_pour_guardian(analyse_complete, actif):
     - LOGIQUE : (La raison principale en 10 mots)
     """
     try:
-        response = client.chat.completions.create(
+        response = client_architect.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt_synthese}],
             temperature=0.3
@@ -1377,16 +1406,16 @@ def logique_decision_mentor(user_settings, risque_saisi, rr_saisi):
 
     return {"message": "🟢 Setup Conforme. Analyse validée par le Mentor.", "couleur": "green", "autorise": True}
 
-def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_settings): 
-    """
-    Version API de 'lancer_analyse'.
-    Ne contient plus de 'self' ni de 'messagebox'.
-    Prend les données brutes et renvoie le verdict final.
-    """
+def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_settings):
+    # Classe simple pour simuler app_instance
+    class AppMock:
+        def __init__(self, settings):
+            self.user_settings = settings
+            self.info_sl_tp = "N/A"
+            self.raisonnement_user = "N/A"
+
     try:
-        severite = user_settings.get("ia_severite", "Neutre")
-        
-        # 1. Sécurité (Maintenue)
+        # 1. Sécurité
         if len(analyse_actuelle.strip()) < 10:
             return {
                 "statut": "erreur",
@@ -1394,20 +1423,21 @@ def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_setti
                 "message": "Ton analyse est trop courte pour être auditée par le Mentor."
             }
 
-        # 2. Appel de l'IA (On utilise la fonction de calcul existante)
-        # On passe les arguments nécessaires à analyser_ia_pro
+        # 2. Création de l'instance simulée
+        app_mock = AppMock(user_settings)
+
+        # 3. Appel de l'IA avec l'objet valide
         score, verdict, couleur = analyser_ia_pro(
-            None, # app_instance remplacé par None car géré par API
-            "", # ancienne_analyse
+            app_mock,           # app_instance maintenant valide
+            "",                 # ancienne_analyse
             analyse_actuelle, 
             "EN_COURS", 
             actif_actuel, 
             valeur_conviction,
-            "", # guide_etudiant (à fournir via settings si besoin)
-            ""  # guide_expert
+            "",                 # guide_etudiant
+            ""                  # guide_expert
         )
 
-        # 3. Construction du retour (Remplace l'UI update)
         return {
             "statut": "success",
             "score": score,
@@ -1417,11 +1447,12 @@ def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_setti
         }
 
     except Exception as e:
+        # Affiche l'erreur complète dans les logs pour ton débogage
+        print(f"CRITIQUE : Erreur lors de l'analyse : {str(e)}")
         return {
             "statut": "erreur",
             "message": f"Le moteur d'analyse a rencontré une erreur technique : {str(e)}"
         }
-
 def analyser_question_suivi(etape_nom, question, reponse_user, user_settings):
     """
     Version API de 'analyser_question_suivi'.
@@ -1448,7 +1479,7 @@ def analyser_question_suivi(etape_nom, question, reponse_user, user_settings):
            Action : Bloque le passage + explique l'erreur clairement + termine par [INCORRECT].
         """
         
-        response = client.chat.completions.create(
+        response = client_architect.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": f"Tu es un Mentor Trading expert et {severite}."},
