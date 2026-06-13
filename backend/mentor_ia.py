@@ -952,6 +952,17 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     - "Le trade est refusé pour non-respect du cadre de risque."
     - "La conviction n’est pas justifiée par les données."
     - "Le plan est exploitable sous ajustement."
+
+    ═══════════════════════════════
+    EN CAS D'INDISPONIBILITÉ DES DONNÉES MACRO (FOREX FACTORY)
+    ═══════════════════════════════
+    {instructions_macro}
+
+    [DONNÉES ISOLÉES DU FRONTEND]
+    {donnees_techniques}
+    
+    {instructions_mode}
+
     """
     
     try:
