@@ -24,11 +24,8 @@ print(f"DEBUG: ARCHITECT_KEY trouvé ? {bool(os.getenv('OPENAI_ARCHITECT_KEY'))}
 POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
-# IA 1 : L'Architecte (Analyse froide)
-client_architect = OpenAI(api_key=os.getenv("OPENAI_ARCHITECT_KEY"))
-
 # IA 2 : Le Guardian (Discipline & Émotion)
-client_guardian = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_GUARDIAN_KEY"))
 
 import time
 import requests
@@ -68,7 +65,7 @@ GUIDES_QUESTIONNAIRES = {
 class MarketGuard:
     def __init__(self):
         # Plus besoin de clé API Polygon
-        self.client_architect = client_architect
+        self.client_architect = client
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) MentorIA/1.0"
@@ -412,17 +409,6 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     Fonction principale d'appel à l'API OpenAI avec spécialisation dynamique par mode.
     Conserve le prompt original pour le mode SWING.
     """
-    print("DEBUG: La fonction analyser_ia_pro est bien appelée.")
-    
-    # Ajoute un test de connexion manuel rapide
-    try:
-        test = client_architect.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": "Ping"}]
-        )
-        print("DEBUG: Connexion OpenAI OK.")
-    except Exception as e:
-        print(f"DEBUG: ERREUR CONNEXION : {e}")
     
     user_settings = getattr(app_instance, 'user_settings', {})
     severite = user_settings.get("ia_severite", "Neutre")
@@ -978,7 +964,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     """
     
     try:
-        response = client_architect.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : {severite}."}, 
@@ -1216,7 +1202,7 @@ def analyser_compagnon_live(app_instance, message_utilisateur, plan_initial_resu
 
     try:
         # Appel à l'API OpenAI avec le prompt non-simplifié
-        response = client_guardian.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt_officiel},
@@ -1244,7 +1230,7 @@ def synthetiser_plan_pour_guardian(analyse_complete, actif):
     - LOGIQUE : (La raison principale en 10 mots)
     """
     try:
-        response = client_architect.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt_synthese}],
             temperature=0.3
@@ -1462,7 +1448,7 @@ def analyser_question_suivi(etape_nom, question, reponse_user, user_settings):
            Action : Bloque le passage + explique l'erreur clairement + termine par [INCORRECT].
         """
         
-        response = client_architect.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": f"Tu es un Mentor Trading expert et {severite}."},
