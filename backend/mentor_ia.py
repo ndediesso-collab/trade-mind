@@ -412,6 +412,18 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     Fonction principale d'appel à l'API OpenAI avec spécialisation dynamique par mode.
     Conserve le prompt original pour le mode SWING.
     """
+    print("DEBUG: La fonction analyser_ia_pro est bien appelée.")
+    
+    # Ajoute un test de connexion manuel rapide
+    try:
+        test = client_architect.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": "Ping"}]
+        )
+        print("DEBUG: Connexion OpenAI OK.")
+    except Exception as e:
+        print(f"DEBUG: ERREUR CONNEXION : {e}")
+    
     user_settings = getattr(app_instance, 'user_settings', {})
     severite = user_settings.get("ia_severite", "Neutre")
     
