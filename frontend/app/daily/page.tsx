@@ -518,21 +518,43 @@ export default function DailyMode() {
 
             <div className="text-[11px] leading-relaxed text-zinc-400 whitespace-pre-line">
               {sessionStatus === "DEBUT" ? (
-                <div className="space-y-6 animate-in fade-in duration-200 font-sans">
-                  <section className="relative pl-4 border-l border-blue-500/30">
-                    <h4 className="text-[10px] font-black uppercase tracking-wider text-blue-400 mb-2">1— Contexte du Marché</h4>
-                    <p className="text-zinc-200 font-bold">Quel est le sentiment actuel du marché ?</p>
-                    <p>• La tendance dominante est-elle : (Hausse / Baisse / Range)</p>
-                    <p>• Le marché est-il actuellement : (Impulsif / Lent / Consolidation)</p>
-                    <p>• Une news importante est-elle prévue aujourd’hui ? (Si oui : laquelle et à quelle heure ?)</p>
-                    <p>• Y&apos;a-t-il des données fondamentales des jours précédents qui pourraient affecter la journée d&apos;aujourd&apos;hui ? (ex: marché du travail, inflation, sentiment, géopolitique)</p>
+                <div className="space-y-8 animate-in fade-in duration-200 font-sans">
+                  {/* SECTION 1 */}
+                  <section className="relative pl-4 border-l-2 border-blue-500/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
+                      1 — Contexte & Carburant (Macro & ADR)
+                    </h4>
+                    <div className="space-y-3 text-zinc-300">
+                      <p><span className="font-bold text-zinc-100">Biais HTF vs Dynamique actuelle :</span> (ex: Tendance baissière / Impulsion corrective)</p>
+                      <p><span className="font-bold text-zinc-100">Effets de traîne (Post-News) :</span> Y'a-t-il des données fondamentales des jours précédents (travail, inflation, géopolitique) qui pèsent sur le sentiment actuel ? (Si oui : impact anticipé ?)</p>
+                      <p><span className="font-bold text-zinc-100">État ADR (Average Daily Range) :</span> Quel est l'ATR actuel ? Le prix a-t-il déjà parcouru plus de 80% de son range quotidien ? (Oui/Non)</p>
+                      <p><span className="font-bold text-zinc-100">Calendrier Macro :</span> Une news majeure est-elle prévue dans les 60 prochaines minutes ? (Si oui : laquelle ?)</p>
+                    </div>
                   </section>
 
-                  <section className="relative pl-4 border-l border-blue-500/30">
-                    <h4 className="text-[10px] font-black uppercase tracking-wider text-blue-400 mb-2">2 — Setup Technique & Timing</h4>
-                    <p>• Quel setup prends-tu ? (Breakout, Pullback, Order Block, Sweep, etc.)</p>
-                    <p>• Quelle confirmation valide ton entrée et où se situe ton invalidation logique ?<span className="text-zinc-500 font-medium"> (A insérer dans les cases proches de l&apos;actif)</span></p>
-                    <p>• Session ciblée (Londres / New York) et pourquoi ce timing ?</p>
+                  {/* SECTION 2 */}
+                  <section className="relative pl-4 border-l-2 border-blue-500/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
+                      2 — Setup Technique & Timing (Audit d'Entrée)
+                    </h4>
+                    <div className="space-y-3 text-zinc-300">
+                      <p><span className="font-bold text-zinc-100">Setup Institutionnel :</span> Quel est le déclencheur précis ? (Ex: Sweep, FVG + OB, Breakout)</p>
+                      <p><span className="font-bold text-zinc-100">Validation de la Killzone :</span> Quelle session tradez-vous ? (Londres/NY/Asiatique). Est-on dans une fenêtre de haute volatilité ? (Oui/Non)</p>
+                      <p><span className="font-bold text-zinc-100">Logique d'Invalidation (SL) :</span> Où est placé le SL par rapport à la structure intraday ? Est-il cohérent avec l'ATR ?</p>
+                    </div>
+                  </section>
+
+                  {/* SECTION 3 */}
+                  <section className="relative pl-4 border-l-2 border-blue-500/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
+                      3 — Gestion du Risque & Disciplines (Psychologie)
+                    </h4>
+                    <div className="space-y-3 text-zinc-300">
+                      <p><span className="font-bold text-zinc-100">Rapport Risque/Récompense (RR) :</span> (ex: 1:2.5)</p>
+                      <p><span className="font-bold text-zinc-100">Exposition :</span> Risque total en % du capital.</p>
+                      <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Est-ce une entrée planifiée ou une réaction à l'impulsion actuelle (FOMO) ?</p>
+                      <p><span className="font-bold text-zinc-100">Règle de clôture :</span> As-tu conscience de la nécessité de clôturer avant la fin de session (00h00) ?</p>
+                    </div>
                   </section>
                 </div>
               ) : (

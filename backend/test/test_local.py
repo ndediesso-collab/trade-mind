@@ -17,75 +17,56 @@ import os
 import mentor_ia
 from mentor_ia import MarketGuard
 
-# 1. Ton analyse injectée
+
 analyse_complete = """
-Analyse soumise au Mentor (Copie ce bloc)
-A - IDENTITÉ & CONVICTION
+. Analyse Daily : GBPUSD
+Contexte Macro & Setup Technique
 
-Actif : USDJPY
+1. Contexte du Marché
 
-Biais : Long (Achat). Score de conviction : 90%.
-Justification : Le prix est au-dessus de ma moyenne mobile 20 et j'ai une intuition forte qu'il va monter.
+Tendance dominante : Baisse (Structure HTF marquée par des sommets descendants).
 
-B - ANALYSE MACRO & CONTEXTE GLOBALE
+Dynamique actuelle : Impulsive (Accélération suite à la cassure du support majeur).
 
-Sentiment : Risk-off (peur) mais j'achète USD car c'est une valeur refuge.
+News & Fondamentaux : Aucune news majeure ce dimanche. En toile de fond : les attentes divergentes entre la BoE (Bank of England) qui lutte contre une inflation persistante et la Fed (USA) qui temporise. Les données sur l'emploi US de vendredi dernier pèsent encore, renforçant le dollar.
 
-Rendements : US02Y en baisse, mais je pense que le dollar va monter quand même.
+2. Setup Technique & Timing
 
-Différentiel : Le Japon a des taux bas, les US ont des taux hauts, donc c'est logique.
+Setup : Pullback sur ancien support devenu résistance.
 
-Inflation : Les USA ont une inflation élevée, donc le dollar doit monter.
+Confirmation : Rejet en zone 1.2700 (ancien support) validé par une divergence RSI sur H4 et une bougie d'épuisement en daily.
 
-Géopolitique : Pas vraiment regardé, mais ça n'impacte pas le forex.
+Invalidation : 30 pips au-dessus de la mèche de rejet.
 
-Corrélations : L'or baisse, donc l'USDJPY doit monter.
-
-Événement à venir : Non, je ne regarde pas le calendrier.
-🔎 Conclusion : Le dollar est dominant car c'est la monnaie mondiale. Dites-moi si je dois acheter maintenant pour profiter de la hausse.
-
-D - ANALYSE TECHNIQUE
-
-Structure : Tendance haussière partout.
-
-Momentum : Bougies vertes fortes.
-
-Zones : Je suis en plein milieu de nulle part, mais ça a l'air de vouloir monter.
-
-Liquidité : Pas regardé si les sommets ont été nettoyés.
-
-E - GESTION DU RISQUE
-
-Pourquoi maintenant : Parce que je veux faire du profit avant ce soir.
-
-Stop Loss : 145.00 (valeur arbitraire).
-
-RR : 1:1.5.
-
-Confirmation : Non, mais je sens que ça va passer.
+Session ciblée : Londres (08h00 - 10h00) pour exploiter la reprise du flux institutionnel européen face au dollar.
 """
 
-# 2. Paramètres de test
+# 2. Paramètres de test : ON FORCE LE MODE "DAILY" ICI
 conviction = 75
-actif = "AUDNZD"
-settings = {"ia_severite": "Neutre"}
+actif = "USDJPY"
+# C'est ici que tu injectes le mode pour que mentor_ia puisse router vers le bon prompt
+settings = {
+    "ia_severite": "Neutre",
+    "mode": "DAILY"  
+}
 
-print("--- DÉBUT DU TEST UNITAIRE IA ---")
+print("--- DÉBUT DU TEST UNITAIRE : MODE DAILY ---")
 
 try:
-    # Test de récupération MarketGuard (Juste pour vérifier que l'API n'est pas bloquée)
     guard = MarketGuard()
     print(f"Test MarketGuard pour {actif}...")
     context = guard.preparer_contexte_marche(actif)
     print("MarketGuard OK.")
 
-    # Test IA Mentor
-    print("\nLancement de l'analyse par le Mentor...")
+    print("\nLancement de l'analyse par le Mentor (Mode DAILY)...")
+    
+    # Appel ajusté : on passe le mode dans les settings ou en argument direct
+    # selon la signature de ta fonction lancer_analyse dans mentor_ia.py
     resultat = mentor_ia.lancer_analyse(
         analyse_complete, 
         conviction, 
         actif, 
-        settings
+        settings  # Le mentor va lire settings['mode']
     )
     
     print("\n--- RÉSULTAT REÇU ---")

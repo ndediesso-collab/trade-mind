@@ -173,10 +173,11 @@ async def route_update_capital(amount: float = Query(...), token: str = Depends(
 @app.post("/analyse/swing")
 async def route_analyse(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
     try:
+        # 0. INITIALISATION CONTEXTE
         current_metrics = dashboard_engine.get_full_metrics()
         is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        # 1. RÉCUPÉRATION DES NEWS (Propre)
+        # 1. RÉCUPÉRATION DES NEWS
         alerte_news = ""
         try:
             shared_guard = MarketGuard()
@@ -187,11 +188,11 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
         except Exception as e:
             logging.error(f"⚠️ Erreur news : {e}")
 
-        # 2. TENTATIVE IA (Utilise l'objet simulé pour éviter le crash app_instance)
+        # 2. TENTATIVE IA (Architecture unifiée)
+        # L'IA reçoit data.mode (SWING/DAILY/SCALP), elle s'ajuste dynamiquement via mentor_ia
         feedback_ia = "Analyse IA temporairement indisponible."
         
         try:
-            # On utilise le Mock pour éviter le besoin d'un vrai app_instance
             class AppMock:
                 def __init__(self, settings):
                     self.user_settings = settings
@@ -200,33 +201,53 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
             
             app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
 
+            # Le moteur mentor_ia reçoit ici tout le contexte, y compris le mode
             score, verdict, couleur = mentor_ia.analyser_ia_pro(
-                app_mock, "", data.analyse, "EN_COURS", 
-                data.actif, data.conviction, "", "", data.mode
+                app_mock, 
+                "",              # Ancienne analyse
+                data.analyse,    # Nouvelle analyse
+                data.statut,     # Statut actuel
+                data.actif, 
+                data.conviction, 
+                "",              # Guide étudiant
+                "",              # Guide expert
+                data.mode        # C'est ici que le moteur choisit entre SWING, DAILY, SCALP
             )
             feedback_ia = verdict
         except Exception as ie:
-            logging.error(f"⚠️ Erreur IA : {ie}")
+            logging.error(f"⚠️ Erreur moteur IA ({data.mode}) : {ie}")
+            feedback_ia = f"Erreur de génération : {str(ie)}"
 
         # 3. FUSION PROPRE
-        feedback_final = f"{alerte_news}[ANALYSE IA]\n{feedback_ia}"
+        feedback_final = f"{alerte_news}[ANALYSE IA — {data.mode.upper()}]\n{feedback_ia}"
 
-        # 4. SAUVEGARDE
+        # 4. SAUVEGARDE COMPLÈTE (Mapping explicite)
+        # On envoie ici toutes les données pour éviter le retour "terme/vide"
         trade_id = database.sauvegarder_trade_final(
-            actif=data.actif, biais="Neutre", conviction=data.conviction, 
-            score_ia=0, analyse=data.analyse, feedback=feedback_final, 
-            statut=data.statut, position=data.position, mode=data.mode, t_type=data.type
+            actif=data.actif,
+            biais=data.position,        # On mappe la position (ACHAT/VENTE)
+            conviction=data.conviction,
+            score_ia=0,
+            analyse=data.analyse,
+            feedback=feedback_final,
+            statut=data.statut,         # Statut (BROUILLON/WIN/LOSS)
+            position=data.position,     # Position (ACHAT/VENTE)
+            mode=data.mode,             # Mode (SWING/DAILY/SCALP)
+            t_type=data.type            # Type (ex: SWING)
         )
         
         return {
             "feedback": feedback_final,
-            "engine_status": "SAFE"
+            "engine_status": "SAFE",
+            "trade_id": trade_id
         }
 
     except Exception as e:
-        logging.error(f"❌ Erreur critique : {e}")
-        # Retourne un JSON valide même en cas d'erreur pour ne pas bloquer le frontend
-        return {"feedback": "Erreur système lors de l'audit.", "engine_status": "ERROR"}
+        logging.error(f"❌ Erreur critique route_analyse : {e}")
+        return {
+            "feedback": f"Erreur système critique : {str(e)}", 
+            "engine_status": "ERROR"
+        }
     
 @app.post("/database/save")
 async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(verifier_session_terminal)):

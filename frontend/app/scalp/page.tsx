@@ -515,44 +515,61 @@ export default function ScalpMode() {
               </div>
 
               {/* LOGIQUE QUESTIONNAIRE SÉPARÉE ET COMPLÈTE */}
-              <div className="animate-in fade-in duration-300 font-sans">
+              <div className="animate-in fade-in duration-300 font-sans space-y-6">
                 {sessionStatus === "DEBUT" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3 border-r border-white/5 pr-2">
-                      <div className="text-blue-400 font-black uppercase text-[9px] tracking-widest">1 — Analyse Macro (Fondamentale)</div>
-                      <div className="text-[11px] text-zinc-400">
-                        • Analyse-tu le calendrier économique pour les news High Impact (CPI, NFP, taux) ? 
-                        <HelpTooltip title="Calendrier Économique" content="Ne scalpe jamais une news majeure sans préparation." subVideos={[educationalContent.fundamental.calendrier]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
+                  /* --- ÉTAT : DÉBUT DE SESSION (Checklist de Combat) --- */
+                  <>
+                    <section className="relative pl-4 border-l-2 border-yellow-500/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-yellow-400 mb-3">1 — Contexte & Filtres</h4>
+                      <div className="space-y-3 text-[11px] text-zinc-400">
+                        <div>
+                          • <span className="font-bold text-zinc-200">Calendrier Macro :</span> News "High Impact" dans les 30 min ?
+                          <HelpTooltip title="Calendrier Économique" content="La volatilité incontrôlée est l'ennemie du scalp." subVideos={[educationalContent.fundamental.calendrier]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
+                        </div>
+                        <div>
+                          • <span className="font-bold text-zinc-200">Corrélation & Sentiment :</span> Corrélation (DXY/VIX) et sentiment alignés ?
+                          <HelpTooltip title="Corrélation & Flux" content="DXY/VIX valident la direction du flux." subVideos={[educationalContent.fundamental.rendements]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
+                        </div>
                       </div>
-                      <div className="text-[11px] text-zinc-400">• As-tu vérifié la corrélation actuelle du DXY (Dollar) pour confirmer ton biais ? 
-                        <HelpTooltip title="Corrélation Forex" content="Le DXY est le pivot du marché." subVideos={[educationalContent.fundamental.rendements]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
+                    </section>
+
+                    <section className="relative pl-4 border-l-2 border-red-500/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-3">2 — Audit d'Entrée</h4>
+                      <div className="space-y-3 text-[11px] text-zinc-400">
+                        <div>
+                          • <span className="font-bold text-zinc-200">Setup Institutionnel :</span> Quel déclencheur ? (Sweep, FVG, Breakout)
+                          <HelpTooltip title="Setup Scalp" content="Sois sélectif, attends ton setup." subVideos={educationalContent.technical.scalpSetups} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
+                        </div>
+                        <div>• <span className="font-bold text-zinc-200">Prix d'entrée & SL :</span> Invalidation technique indiscutable ?</div>
+                        <div>• <span className="font-bold text-zinc-200">Ratio Risque/Gain :</span> RR visé couvrant spreads/frais ?</div>
+                        <div>• <span className="font-bold text-zinc-200">Session :</span> Killzone de volatilité (Londres/NY) ?</div>
                       </div>
-                      <div className="text-[11px] text-zinc-400">• Le sentiment actuel du marché (Risk-on/Risk-off) est-il favorable ? 
-                        <HelpTooltip title="Géopolitique" content="Les tensions mondiales créent de la volatilité." subVideos={[educationalContent.fundamental.geopolitique]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
+                    </section>
+
+                    <section className="relative pl-4 border-l-2 border-green-500/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-3">3 — Discipline & État</h4>
+                      <div className="space-y-3 text-[11px] text-zinc-400">
+                        <div>• <span className="font-bold text-zinc-200">Risque de session :</span> Risque max quotidien respecté ?</div>
+                        <div>• <span className="font-bold text-zinc-200">Discipline :</span> Confirmation réelle ou FOMO ?</div>
+                        <div>• <span className="font-bold text-zinc-200">Clarté Mentale :</span> 100% focus ?</div>
                       </div>
-                    </div>
-                    <div className="space-y-3 pl-2">
-                      <div className="text-blue-400 font-black uppercase text-[9px] tracking-widest">2 — Intentions Techniques</div>
-                      <div className="text-[11px] text-zinc-400">• Quel setup institutionnel vas-tu cibler aujourd'hui ? (Ex: Breaker, FVG, Liquidity Sweep) 
-                        <HelpTooltip title="Setup Scalp" content="Sois sélectif, attends ton setup." subVideos={educationalContent.technical.scalpSetups} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
-                      </div>
-                      <div className="text-[11px] text-zinc-400">• As-tu déterminé ton risque maximal autorisé pour cette session ?</div>
-                      <div className="text-[11px] text-zinc-400">• Ton niveau de clarté mentale est-il à 100% pour scalper ?</div>
-                    </div>
-                  </div>
+                    </section>
+                  </>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1 border-r border-white/5 pr-2">
-                      <div className="text-red-400 font-black uppercase text-[9px] tracking-widest">1 — Résultat & Métriques de Clôture</div>
-                      <div className="text-[11px] text-zinc-400">Veuillez formuler une rédaction de fin de session qui prendra en compte les points ci-dessous :</div>
-                      <div className="text-[11px] text-zinc-400">• Nombre exact de micro-scalps exécutés : <span className="text-white font-bold">{scalcWin + scalcLoss + scalcBe}</span></div>
-                      <div className="text-[11px] text-zinc-400">• Ratio exact de trades gagnants / perdants : <span className="text-white font-bold">{scalcWin}W - {scalcLoss}L</span></div>
+                  /* --- ÉTAT : CLÔTURE DE SESSION (Débriefing) --- */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-4">
+                    <div className="space-y-3">
+                      <div className="text-red-400 font-black uppercase text-[9px] tracking-widest">1 — Résultat & Métriques</div>
+                      <div className="text-[11px] text-zinc-400">Veuillez formuler une rédaction qui prend en compte :</div>
+                      <div className="text-[11px] text-zinc-400">• Trades exécutés : <span className="text-white font-bold">{scalcWin + scalcLoss + scalcBe}</span></div>
+                      <div className="text-[11px] text-zinc-400">• Ratio W/L : <span className="text-white font-bold">{scalcWin}W - {scalcLoss}L</span></div>
                     </div>
-                    <div className="space-y-1 pl-2 text-[11px] text-zinc-400">
-                      <div className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[9px] tracking-widest"><ShieldAlert size={12}/> Action_Requise</div>
-                      <div>• Respect du plan, des tailles et du Drawdown maximal ?</div>
-                      <div>• Détection de sur-trading ou d&apos;impulsivité mécanique ?</div>
-                      <div className="text-zinc-100 italic">• Note finale de propreté d&apos;exécution sur 10.</div>
+                    
+                    <div className="space-y-3 text-[11px] text-zinc-400">
+                      <div className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[9px] tracking-widest"><ShieldAlert size={12}/> Action Requise</div>
+                      <div>• Respect du plan, tailles et Drawdown ?</div>
+                      <div>• Détection de sur-trading ou impulsivité ?</div>
+                      <div className="text-zinc-100 italic">• Note finale d'exécution (0-10).</div>
                     </div>
                   </div>
                 )}

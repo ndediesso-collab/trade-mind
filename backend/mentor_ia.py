@@ -342,9 +342,8 @@ class MarketGuard:
         data = market_cache.get("data", {})
 
         
-        # Conversion des listes de news en chaînes lisibles pour l'IA
-        str_news_macro = "\n".join(news_macro) if isinstance(news_macro, list) else str(news_macro)
-        str_news_geo = "\n".join(news_geo_filtrees) if isinstance(news_geo_filtrees, list) else str(news_geo_filtrees)
+        str_news_macro = "\n".join([str(n) for n in news_macro]) if isinstance(news_macro, list) else str(news_macro)
+        str_news_geo = "\n".join([str(n) for n in news_geo_filtrees]) if isinstance(news_geo_filtrees, list) else str(news_geo_filtrees)
         
         return {
             "heure_utc": heure_serveur,
@@ -408,6 +407,20 @@ class MarketGuard:
 def get_news(actif, guard=None):
     if guard is None:
         guard = MarketGuard() 
+
+    # Initialisation sécurisée
+    geo_titles = [] 
+    
+    events_critiques = guard.get_forex_factory_news(actif)
+    sentiment_global = guard.fetch_cnn_index()
+    
+    cnn_score = sentiment_global.get('score') if isinstance(sentiment_global, dict) else None
+    
+    # Tentative de récupération, si ça échoue, geo_titles restera []
+    try:
+        geo_titles = guard.get_geopolitical_news(actif, sentiment=cnn_score)
+    except Exception as e:
+        logging.error(f"Erreur lors de la récupération geo : {e}")    
     
     # 1. Données brutes
     events_critiques = guard.get_forex_factory_news(actif)
@@ -417,23 +430,29 @@ def get_news(actif, guard=None):
     # Si sentiment_global est un dict, on extrait le score, sinon on passe None
     cnn_score = sentiment_global.get('score') if isinstance(sentiment_global, dict) else None
     
-    # 3. Appel avec la valeur réelle (ou None)
-    # L'IA est capable de gérer une absence de score, mais pas un score faux (50)
-    geo_titles = guard.get_geopolitical_news(actif, sentiment=cnn_score)
-    
-    # 3. Construction de la synthèse structurée
-    resultat = f"--- 🎭 INDICE SENTIMENT GLOBAL ---\n{sentiment_global.get('label', 'Neutre')}\n\n"
+    # 3. Construction sécurisée (Conversion forcée en str)
+    label = sentiment_global.get('label', 'Neutre') if isinstance(sentiment_global, dict) else "Neutre"
+    resultat = f"--- 🎭 INDICE SENTIMENT GLOBAL ---\n{label}\n\n"
     
     resultat += "--- 📅 CALENDRIER ÉCONOMIQUE (MACRO) ---\n"
-    resultat += "\n".join(events_critiques) if events_critiques else "Aucun événement impactant prévu."
+    # CORRECTION ICI : On transforme chaque élément en chaîne de caractères
+    if events_critiques:
+        resultat += "\n".join([str(e) for e in events_critiques])
+    else:
+        resultat += "Aucun événement impactant prévu."
     
     resultat += "\n\n--- 🌍 FLASH GÉOPOLITIQUE (RISK) ---\n"
-    resultat += "\n".join(geo_titles)
+    # CORRECTION ICI : On transforme chaque élément en chaîne de caractères
+    resultat += "\n".join([str(g) for g in geo_titles])
     
     return resultat
 
 
-def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_analyse, actif, conviction, guide_etudiant_contenu, guide_expert_contenu, mode="SWING",data_json=None):
+def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_analyse, actif, conviction, guide_etudiant_contenu, guide_expert_contenu, mode="SWING", data_json=None):
+    
+    # FORÇAGE DU MODE POUR ÉVITER LES ERREURS
+    mode = str(mode) if mode else "SWING" 
+    mode_upper = mode.upper()
     """
     Fonction principale d'appel à l'API OpenAI avec spécialisation dynamique par mode.
     Conserve le prompt original pour le mode SWING.
@@ -523,7 +542,18 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         macro imprévues.
         """
     else:
-        instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_list)}"
+        # CORRECTION : On transforme chaque news (qui est un dict) en chaîne de caractères 
+        # en extrayant par exemple le titre ou en convertissant tout le dict en str.
+        # Ici, on prend une approche robuste :
+        news_str_list = []
+        for n in news_list:
+            if isinstance(n, dict):
+                # Si c'est un dict, on extrait le titre ou on convertit en str
+                news_str_list.append(n.get('title', str(n)))
+            else:
+                news_str_list.append(str(n))
+        
+        instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
 
     # 4. LOGIQUE DE SÉLECTION DU MODE (SQUELETTE DYNAMIQUE)
     mode_upper = mode.upper()
@@ -592,6 +622,33 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
             "afin d’améliorer sa constance sur les micro-timeframes."
         )
         instructions_mode = """
+
+        [MODE SCALPING — GARDES-FOU AVANT EXÉCUTION]
+
+        TU ES UN ANALYSTE D'EXÉCUTION SÉNIOR. TA SEULE MISSION EST DE PROTÉGER LE CAPITAL.
+
+        AVANT CHAQUE TRADE, LE TRADER DOIT SOUMETTRE SON PLAN. 
+        TU DOIS L'AUDITER AVEC UNE RIGUEUR MILITAIRE :
+
+        1. VALIDATION TECHNIQUE (CRITIQUE) :
+        - Est-ce que le setup (Sweep, FVG, Breakout) est confirmé par une structure claire ? 
+        - Le SL est-il placé à un niveau où l'invalidant technique est indiscutable ? (Un SL "au feeling" est un motif de rejet immédiat).
+        - Le RR est-il vérifiable ? Si le TP est trop proche pour couvrir les spreads/frais du scalping → REJET.
+
+        2. DÉTECTION D'IMPULSIVITÉ (PSYCHOLOGIE) :
+        - Le trader a-t-il un plan précis ou est-il en train de "chasser" le prix par FOMO ?
+        - Si le trader n'a pas de confirmation (ex: pas de sweep avant de prendre un achat) → REJET.
+
+        3. CONTEXTE MACRO/SÉANCE :
+        - Le trader a-t-il vérifié la séance (Londres/NY) ?
+        - Est-il en dehors d'une zone de haute volatilité prévue ?
+
+        RÈGLES DE RÉPONSE :
+        - SI LE PLAN EST MAUVAIS : "INVALIDE" (en majuscules) suivi de la raison précise. Ne cherche pas à consoler le trader.
+        - SI LE PLAN EST CORRECT : "VALIDÉ" suivi des points de vigilance à surveiller pendant l'exécution.
+
+        RÈGLE D'OR : En cas de doute sur la précision de l'entrée, c'est un "NON" automatique. Le scalping ne tolère pas l'approximation.
+
         [MODE SCALPING — DÉBRIEFING POST-SESSION]
 
         IMPORTANT :
@@ -1428,14 +1485,16 @@ def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_setti
 
         # 3. Appel de l'IA avec l'objet valide
         score, verdict, couleur = analyser_ia_pro(
-            app_mock,           # app_instance maintenant valide
-            "",                 # ancienne_analyse
+            app_mock, 
+            "",                     # ancienne_analyse
             analyse_actuelle, 
             "EN_COURS", 
             actif_actuel, 
             valeur_conviction,
-            "",                 # guide_etudiant
-            ""                  # guide_expert
+            "",                     # guide_etudiant
+            "",                     # guide_expert
+            user_settings.get("mode", "SWING"), # <-- AJOUT DU MODE ICI
+            data_json=None          # <-- ARGUMENT NOMMÉ
         )
 
         return {
