@@ -174,11 +174,9 @@ async def route_update_capital(amount: float = Query(...), token: str = Depends(
 async def route_analyse(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
     try:
         current_metrics = dashboard_engine.get_full_metrics()
-        risk_engine_data = current_metrics.get("risk_engine", {})
-        is_locked = risk_engine_data.get("status") == "LOCKDOWN"
+        is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        # 1. RÉCUPÉRATION DES NEWS (Indépendant de l'IA)
-        # On le fait AVANT tout, comme ça même si l'IA échoue, l'info arrive.
+        # 1. RÉCUPÉRATION DES NEWS (Propre)
         alerte_news = ""
         try:
             shared_guard = MarketGuard()
@@ -186,49 +184,49 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
                 alerte_news = f"{alerte}\n\n"
-            elif hasattr(mentor_ia, "lancer_analyse"):
-                resultat = mentor_ia.lancer_analyse(...) # <--- ICI    
         except Exception as e:
-            logging.error(f"⚠️ Erreur récupération news : {e}")
+            logging.error(f"⚠️ Erreur news : {e}")
 
-        # 2. TENTATIVE IA (Isolée)
-        feedback_ia = "Analyse IA temporairement indisponible (Quota atteint)."
+        # 2. TENTATIVE IA (Utilise l'objet simulé pour éviter le crash app_instance)
+        feedback_ia = "Analyse IA temporairement indisponible."
+        
         try:
-            if hasattr(mentor_ia, "lancer_analyse_api"):
-                resultat = mentor_ia.lancer_analyse_api(
-                    data.analyse, data.conviction, data.actif, 
-                    {"ia_severite": "Strict" if is_locked else "Neutre"}
-                )
-                feedback_ia = resultat.get("verdict", feedback_ia)
-            elif hasattr(mentor_ia, "lancer_analyse"):
-                resultat = mentor_ia.lancer_analyse(
-                    data.analyse, 
-                    data.conviction, 
-                    data.actif,
-                    {"ia_severite": "Strict" if is_locked else "Neutre"} # AJOUTE CET ARGUMENT
-    )
+            # On utilise le Mock pour éviter le besoin d'un vrai app_instance
+            class AppMock:
+                def __init__(self, settings):
+                    self.user_settings = settings
+                    self.info_sl_tp = "N/A"
+                    self.raisonnement_user = "N/A"
+            
+            app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
+
+            score, verdict, couleur = mentor_ia.analyser_ia_pro(
+                app_mock, "", data.analyse, "EN_COURS", 
+                data.actif, data.conviction, "", "", data.mode
+            )
+            feedback_ia = verdict
         except Exception as ie:
-            logging.error(f"⚠️ Erreur appel IA : {ie}")
-            # On ne fait pas de return ici, on laisse le code continuer pour sauver le trade
+            logging.error(f"⚠️ Erreur IA : {ie}")
 
         # 3. FUSION PROPRE
         feedback_final = f"{alerte_news}[ANALYSE IA]\n{feedback_ia}"
 
-        # 4. SAUVEGARDE (Même si l'IA a échoué)
+        # 4. SAUVEGARDE
         trade_id = database.sauvegarder_trade_final(
-            actif=data.actif, biais="Neutre", conviction=data.conviction, score_ia=0,      
-            analyse=data.analyse, feedback=feedback_final, statut=data.statut,
-            position=data.position, mode=data.mode, t_type=data.type
+            actif=data.actif, biais="Neutre", conviction=data.conviction, 
+            score_ia=0, analyse=data.analyse, feedback=feedback_final, 
+            statut=data.statut, position=data.position, mode=data.mode, t_type=data.type
         )
         
         return {
             "feedback": feedback_final,
-            "engine_status": "SAFE" # On force SAFE pour ne pas bloquer l'interface
+            "engine_status": "SAFE"
         }
 
     except Exception as e:
         logging.error(f"❌ Erreur critique : {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Retourne un JSON valide même en cas d'erreur pour ne pas bloquer le frontend
+        return {"feedback": "Erreur système lors de l'audit.", "engine_status": "ERROR"}
     
 @app.post("/database/save")
 async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
