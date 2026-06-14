@@ -266,10 +266,27 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
             logging.error(f"⚠️ Erreur récupération news : {e}")
 
         # 3. SAUVEGARDE (Sûre à 100%, indépendante de l'IA)
-        trade_id = database.sauvegarder_trade_final(...)
+        # 3. SAUVEGARDE (Mappage explicite des données)
+        trade_id = database.sauvegarder_trade_final(
+            actif=data.actif,
+            biais=data.position,        # On envoie la position actuelle (ACHAT/VENTE)
+            conviction=data.conviction,
+            score_ia=0,
+            analyse=data.analyse,
+            feedback=feedback_ia,
+            statut=data.statut,         # Le statut WIN/LOSS/BROUILLON est ici
+            position=data.position,     # La direction réelle
+            mode=data.mode,
+            t_type=data.type
+        )
         
-        return {"status": "success", "trade_id": trade_id, "feedback": feedback_ia, "engine_status": ("Status", "SAFE")}
-
+        # On renvoie un statut explicite et le trade_id retourné par ta DB
+        return {
+            "status": "success", 
+            "trade_id": trade_id, 
+            "feedback": feedback_ia, 
+            "engine_status": "SAFE"
+        }
     except Exception as e:
         logging.error(f"❌ Erreur critique : {e}")
         raise HTTPException(status_code=500, detail="Trade enregistré mais analyse IA indisponible.")
