@@ -506,6 +506,7 @@ export default function SwingAnalysis() {
             </div>
 
             {/* Statut Trade */}
+            {/* Statut Trade - Logique simplifiée */}
             <div className="flex flex-col gap-1">
               <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">État</span>
               <div className="flex gap-2">
@@ -517,13 +518,11 @@ export default function SwingAnalysis() {
                 <div className="flex gap-1">
                   <button 
                     onClick={() => setStatut("WIN")}
-                    disabled={statut !== "BROUILLON" && statut !== "WIN"}
                     className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border transition-all ${statut === "WIN" ? "bg-green-600 text-white border-green-500 shadow-[0_0_10px_rgba(22,163,74,0.3)]" : "bg-zinc-900 text-zinc-600 border-transparent hover:bg-zinc-800"}`}>
                     Win
                   </button>
                   <button 
                     onClick={() => setStatut("LOSS")}
-                    disabled={statut !== "BROUILLON" && statut !== "LOSS"}
                     className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border transition-all ${statut === "LOSS" ? "bg-red-600 text-white border-red-500 shadow-[0_0_10px_rgba(220,38,38,0.3)]" : "bg-zinc-900 text-zinc-600 border-transparent hover:bg-zinc-800"}`}>
                     Loss
                   </button>
