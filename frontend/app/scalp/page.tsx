@@ -480,122 +480,90 @@ export default function ScalpMode() {
             </div>
           )}
 
-          {/* Module d'affichage du total de trades compilés */}
-          {sessionStatus === "FIN" && (
-            <div className="flex items-center gap-4 border-l border-white/5 pl-4 font-sans text-xs animate-in fade-in duration-300">
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black uppercase text-zinc-500 tracking-tight">Compteur de Fréquence</span>
-                <span className="text-white font-mono font-black mt-0.5">Total: {scalcWin + scalcLoss + scalcBe} Trades</span>
+          <div className="space-y-8 animate-in fade-in duration-200 font-sans">
+                {sessionStatus === "DEBUT" ? (
+                  <>
+                    {/* Message d'accueil / Pistes de réflexion */}
+                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+                      <h3 className="text-blue-400 font-bold uppercase text-[10px] tracking-widest mb-2">
+                        Garde-fous avant exécution (Scalp)
+                      </h3>
+                      <p className="text-zinc-400 text-[11px] leading-relaxed">
+                        Le scalping ne tolère aucune approximation. Ces points sont vos garde-fous pour 
+                        garantir une exécution chirurgicale et protéger votre capital de l'impulsivité :
+                      </p>
+                    </div>
+
+                    {/* SECTION 1 - CONTEXTE & FILTRES */}
+                    <section className="relative pl-4 border-l-2 border-red-500/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
+                        1 — Contexte & Filtres
+                      </h4>
+                      <div className="space-y-3 text-[11px] text-zinc-300">
+                        <p><span className="font-bold text-zinc-100">Calendrier Macro :</span> News "High Impact" prévue dans les 30 prochaines minutes ?</p>
+                        <p><span className="font-bold text-zinc-100">Corrélation & Sentiment :</span> Les corrélations clés (DXY/VIX) et le sentiment global sont-ils alignés avec votre biais ?</p>
+                      </div>
+                    </section>
+
+                    {/* SECTION 2 - AUDIT D'ENTRÉE */}
+                    <section className="relative pl-4 border-l-2 border-red-500/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
+                        2 — Audit d'Entrée
+                      </h4>
+                      <div className="space-y-3 text-[11px] text-zinc-300">
+                        <p><span className="font-bold text-zinc-100">Setup Institutionnel :</span> Quel est le déclencheur précis ? (Ex: Sweep, FVG, Breakout)</p>
+                        <p><span className="font-bold text-zinc-100">Prix d'entrée & SL :</span> L'invalidation technique est-elle indiscutable ?</p>
+                        <p><span className="font-bold text-zinc-100">Ratio Risque/Gain :</span> Le RR visé est-il suffisant pour couvrir spreads et frais ?</p>
+                        <p><span className="font-bold text-zinc-100">Session :</span> Êtes-vous dans une Killzone de volatilité (Londres/NY) ?</p>
+                      </div>
+                    </section>
+
+                    {/* SECTION 3 - DISCIPLINE & ÉTAT */}
+                    <section className="relative pl-4 border-l-2 border-red-500/50">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
+                        3 — Discipline & État
+                      </h4>
+                      <div className="space-y-3 text-[11px] text-zinc-300">
+                        <p><span className="font-bold text-zinc-100">Risque de session :</span> Votre risque max quotidien est-il respecté ?</p>
+                        <p><span className="font-bold text-zinc-100">Discipline :</span> Confirmation réelle ou simple FOMO ?</p>
+                        <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Êtes-vous à 100% de focus opérationnel ?</p>
+                      </div>
+                    </section>
+
+                    {/* DÉCISION FINALE */}
+                    <section className="mt-8 p-6 bg-red-600/10 border-2 border-red-500/30 rounded-[32px] space-y-4">
+                      <div className="text-white font-black text-xs flex items-center gap-2 uppercase tracking-widest">
+                        <ShieldAlert size={16} className="text-red-400" /> 🎯 Décision Finale
+                      </div>
+                      <div className="space-y-3 text-[10px] font-black uppercase tracking-wider">
+                        <div className="text-green-400">TOUTES conditions réunies : Trade autorisé.</div>
+                        <div className="text-yellow-400">Incohérence détectée : Trade à ajuster.</div>
+                        <div className="text-red-500">Incohérences multiples : Abstention recommandée.</div>
+                      </div>
+                      <div className="text-zinc-500 text-[9px] font-bold mt-4 border-t border-white/5 pt-4 italic uppercase">
+                        Règle d'or : En cas de doute sur la précision de l'entrée, c'est un "NON" automatique. Le scalping ne tolère pas l'approximation.
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  /* --- ÉTAT : CLÔTURE DE SESSION (Débriefing) --- */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-4">
+                    <div className="space-y-3">
+                      <div className="text-red-400 font-black uppercase text-[9px] tracking-widest">1 — Résultat & Métriques</div>
+                      <div className="text-[11px] text-zinc-400">Veuillez formuler une rédaction qui prend en compte :</div>
+                      <div className="text-[11px] text-zinc-400">• Trades exécutés : <span className="text-white font-bold">{scalcWin + scalcLoss + scalcBe}</span></div>
+                      <div className="text-[11px] text-zinc-400">• Ratio W/L : <span className="text-white font-bold">{scalcWin}W - {scalcLoss}L</span></div>
+                    </div>
+                    
+                    <div className="space-y-3 text-[11px] text-zinc-400">
+                      <div className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[9px] tracking-widest"><ShieldAlert size={12}/> Action Requise</div>
+                      <div>• Respect du plan, tailles et Drawdown ?</div>
+                      <div>• Détection de sur-trading ou impulsivité ?</div>
+                      <div className="text-zinc-100 italic">• Note finale d'exécution (0-10).</div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Badge Mode Actif Unifié */}
-          <div className={`flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-mono font-black ${sessionStatus === "DEBUT" ? "text-blue-400" : "text-red-400"}`}>
-            <Gauge size={12} />
-            <span>{sessionStatus === "DEBUT" ? "ANTE_MARKET_PLAN" : "POST_SESSION_AUDIT"}</span>
-          </div>
-        </div>
-
-        {/* CONTENEUR SPLIT BILATÉRAL */}
-        <div className="flex-1 flex gap-4 min-h-0 w-full">
-          
-          {/* PANNEAU GAUCHE : WORKSPACE SÉMANTIQUE ET QUESTIONNAIRE PROTOCOLE */}
-          <div className="flex-[1.2] flex flex-col gap-4 h-full">
-            
-            {/* Boîte des directives du Protocole */}
-            <div className="h-[40%] bg-[#0F1117]/95 border border-white/10 rounded-[32px] p-5 overflow-y-auto custom-scrollbar shadow-2xl relative">
-              <div className="absolute top-6 right-6 text-white/5 pointer-events-none"><Terminal size={80} /></div>
-              
-              <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2">
-                <Target size={14} className={sessionStatus === "DEBUT" ? "text-blue-400" : "text-red-400"} />
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                  {sessionStatus === "DEBUT" ? "Protocol_Pre_Flight_Instructions" : "Protocol_After_Action_Review"}
-                </span>
-              </div>
-
-              <div className="space-y-8 animate-in fade-in duration-200 font-sans">
- 
-                  {/* Message d'accueil / Pistes de réflexion */}
-                  <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
-                    <h3 className="text-blue-400 font-bold uppercase text-[10px] tracking-widest mb-2">
-                      Garde-fous avant exécution (Scalp)
-                    </h3>
-                    <p className="text-zinc-400 text-[11px] leading-relaxed">
-                      Le scalping ne tolère aucune approximation. Ces points sont vos garde-fous pour 
-                      garantir une exécution chirurgicale et protéger votre capital de l'impulsivité :
-                    </p>
-                  </div>
-
-                  {/* SECTION 1 - CONTEXTE & FILTRES */}
-                  <section className="relative pl-4 border-l-2 border-red-500/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
-                      1 — Contexte & Filtres
-                    </h4>
-                    <div className="space-y-3 text-[11px] text-zinc-300">
-                      <p><span className="font-bold text-zinc-100">Calendrier Macro :</span> News "High Impact" prévue dans les 30 prochaines minutes ?</p>
-                      <p><span className="font-bold text-zinc-100">Corrélation & Sentiment :</span> Les corrélations clés (DXY/VIX) et le sentiment global sont-ils alignés avec votre biais ?</p>
-                    </div>
-                  </section>
-
-                  {/* SECTION 2 - AUDIT D'ENTRÉE */}
-                  <section className="relative pl-4 border-l-2 border-red-500/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
-                      2 — Audit d'Entrée
-                    </h4>
-                    <div className="space-y-3 text-[11px] text-zinc-300">
-                      <p><span className="font-bold text-zinc-100">Setup Institutionnel :</span> Quel est le déclencheur précis ? (Ex: Sweep, FVG, Breakout)</p>
-                      <p><span className="font-bold text-zinc-100">Prix d'entrée & SL :</span> L'invalidation technique est-elle indiscutable ?</p>
-                      <p><span className="font-bold text-zinc-100">Ratio Risque/Gain :</span> Le RR visé est-il suffisant pour couvrir spreads et frais ?</p>
-                      <p><span className="font-bold text-zinc-100">Session :</span> Êtes-vous dans une Killzone de volatilité (Londres/NY) ?</p>
-                    </div>
-                  </section>
-
-                  {/* SECTION 3 - DISCIPLINE & ÉTAT */}
-                  <section className="relative pl-4 border-l-2 border-red-500/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
-                      3 — Discipline & État
-                    </h4>
-                    <div className="space-y-3 text-[11px] text-zinc-300">
-                      <p><span className="font-bold text-zinc-100">Risque de session :</span> Votre risque max quotidien est-il respecté ?</p>
-                      <p><span className="font-bold text-zinc-100">Discipline :</span> Confirmation réelle ou simple FOMO ?</p>
-                      <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Êtes-vous à 100% de focus opérationnel ?</p>
-                    </div>
-                  </section>
-
-                  {/* DÉCISION FINALE */}
-                  <section className="mt-8 p-6 bg-red-600/10 border-2 border-red-500/30 rounded-[32px] space-y-4">
-                    <div className="text-white font-black text-xs flex items-center gap-2 uppercase tracking-widest">
-                      <ShieldAlert size={16} className="text-red-400" /> 🎯 Décision Finale
-                    </div>
-                    <div className="space-y-3 text-[10px] font-black uppercase tracking-wider">
-                      <div className="text-green-400">TOUTES conditions réunies : Trade autorisé.</div>
-                      <div className="text-yellow-400">Incohérence détectée : Trade à ajuster.</div>
-                      <div className="text-red-500">Incohérences multiples : Abstention recommandée.</div>
-                    </div>
-                    <div className="text-zinc-500 text-[9px] font-bold mt-4 border-t border-white/5 pt-4 italic uppercase">
-                      Règle d'or : En cas de doute sur la précision de l'entrée, c'est un "NON" automatique. Le scalping ne tolère pas l'approximation.
-                    </div>
-                  </section>
-                </div>
-              ) : (
-                /* --- ÉTAT : CLÔTURE DE SESSION (Débriefing) --- */
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-4">
-                  <div className="space-y-3">
-                    <div className="text-red-400 font-black uppercase text-[9px] tracking-widest">1 — Résultat & Métriques</div>
-                    <div className="text-[11px] text-zinc-400">Veuillez formuler une rédaction qui prend en compte :</div>
-                    <div className="text-[11px] text-zinc-400">• Trades exécutés : <span className="text-white font-bold">{scalcWin + scalcLoss + scalcBe}</span></div>
-                    <div className="text-[11px] text-zinc-400">• Ratio W/L : <span className="text-white font-bold">{scalcWin}W - {scalcLoss}L</span></div>
-                  </div>
-                  
-                  <div className="space-y-3 text-[11px] text-zinc-400">
-                    <div className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[9px] tracking-widest"><ShieldAlert size={12}/> Action Requise</div>
-                    <div>• Respect du plan, tailles et Drawdown ?</div>
-                    <div>• Détection de sur-trading ou impulsivité ?</div>
-                    <div className="text-zinc-100 italic">• Note finale d'exécution (0-10).</div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Boîte de Rédaction Sémantique */}
