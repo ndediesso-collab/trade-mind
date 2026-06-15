@@ -29,7 +29,10 @@ import ReactPlayer from 'react-player';
 // --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
 
 export default function SwingAnalysis() { 
-  
+
+  // Ajoute ces deux lignes avec tes autres useState :
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSuiviActive, setIsSuiviActive] = useState(false);
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   const closeVideo = () => setPlayingVideoUrl(null);
 
