@@ -519,44 +519,72 @@ export default function DailyMode() {
             <div className="text-[11px] leading-relaxed text-zinc-400 whitespace-pre-line">
               {sessionStatus === "DEBUT" ? (
                 <div className="space-y-8 animate-in fade-in duration-200 font-sans">
-                  {/* SECTION 1 */}
-                  <section className="relative pl-4 border-l-2 border-blue-500/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
-                      1 — Contexte & Carburant (Macro & ADR)
-                    </h4>
-                    <div className="space-y-3 text-zinc-300">
-                      <p><span className="font-bold text-zinc-100">Biais HTF vs Dynamique actuelle :</span> (ex: Tendance baissière / Impulsion corrective)</p>
-                      <p><span className="font-bold text-zinc-100">Effets de traîne (Post-News) :</span> Y'a-t-il des données fondamentales des jours précédents (travail, inflation, géopolitique) qui pèsent sur le sentiment actuel ? (Si oui : impact anticipé ?)</p>
-                      <p><span className="font-bold text-zinc-100">État ADR (Average Daily Range) :</span> Quel est l'ATR actuel ? Le prix a-t-il déjà parcouru plus de 80% de son range quotidien ? (Oui/Non)</p>
-                      <p><span className="font-bold text-zinc-100">Calendrier Macro :</span> Une news majeure est-elle prévue dans les 60 prochaines minutes ? (Si oui : laquelle ?)</p>
-                    </div>
-                  </section>
-
-                  {/* SECTION 2 */}
-                  <section className="relative pl-4 border-l-2 border-blue-500/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
-                      2 — Setup Technique & Timing (Audit d'Entrée)
-                    </h4>
-                    <div className="space-y-3 text-zinc-300">
-                      <p><span className="font-bold text-zinc-100">Setup Institutionnel :</span> Quel est le déclencheur précis ? (Ex: Sweep, FVG + OB, Breakout)</p>
-                      <p><span className="font-bold text-zinc-100">Validation de la Killzone :</span> Quelle session tradez-vous ? (Londres/NY/Asiatique). Est-on dans une fenêtre de haute volatilité ? (Oui/Non)</p>
-                      <p><span className="font-bold text-zinc-100">Logique d'Invalidation (SL) :</span> Où est placé le SL par rapport à la structure intraday ? Est-il cohérent avec l'ATR ?</p>
-                    </div>
-                  </section>
-
-                  {/* SECTION 3 */}
-                  <section className="relative pl-4 border-l-2 border-blue-500/50">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
-                      3 — Gestion du Risque & Disciplines (Psychologie)
-                    </h4>
-                    <div className="space-y-3 text-zinc-300">
-                      <p><span className="font-bold text-zinc-100">Rapport Risque/Récompense (RR) :</span> (ex: 1:2.5)</p>
-                      <p><span className="font-bold text-zinc-100">Exposition :</span> Risque total en % du capital.</p>
-                      <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Est-ce une entrée planifiée ou une réaction à l'impulsion actuelle (FOMO) ?</p>
-                      <p><span className="font-bold text-zinc-100">Règle de clôture :</span> As-tu conscience de la nécessité de clôturer avant la fin de session (00h00) ?</p>
-                    </div>
-                  </section>
+  
+                {/* Message d'accueil / Pistes de réflexion */}
+                <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+                  <h3 className="text-blue-400 font-bold uppercase text-[10px] tracking-widest mb-2">
+                    Pistes de réflexion pour votre analyse
+                  </h3>
+                  <p className="text-zinc-400 text-[11px] leading-relaxed">
+                    Chaque trader possède sa propre méthode. Pour garantir une analyse robuste et alignée 
+                    avec nos standards de Risk Management, nous vous recommandons de vérifier les points 
+                    suivants avant de valider votre plan :
+                  </p>
                 </div>
+
+                {/* SECTION 1 */}
+                <section className="relative pl-4 border-l-2 border-blue-500/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
+                    1 — Contexte & Carburant (Macro & ADR)
+                  </h4>
+                  <div className="space-y-3 text-[11px] text-zinc-300">
+                    <p><span className="font-bold text-zinc-100">Biais HTF vs Dynamique :</span> Quelle est la tendance de fond et comment s'inscrit-elle dans l'impulsion du jour ?</p>
+                    <p><span className="font-bold text-zinc-100">Effets de traîne (Post-News) :</span> Y a-t-il des données fondamentales récentes (travail, inflation, géopolitique) qui influencent le sentiment actuel ?</p>
+                    <p><span className="font-bold text-zinc-100">État ADR (Average Daily Range) :</span> Quel est l'ATR actuel ? Le prix a-t-il déjà parcouru plus de 80% de son range quotidien ?</p>
+                    <p><span className="font-bold text-zinc-100">Calendrier Macro :</span> Une news majeure est-elle prévue dans les 60 prochaines minutes ?</p>
+                  </div>
+                </section>
+
+                {/* SECTION 2 */}
+                <section className="relative pl-4 border-l-2 border-blue-500/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
+                    2 — Setup Technique & Timing (Audit d'Entrée)
+                  </h4>
+                  <div className="space-y-3 text-[11px] text-zinc-300">
+                    <p><span className="font-bold text-zinc-100">Setup Institutionnel :</span> Quel est le déclencheur précis ? (Ex: Sweep, FVG + OB, Breakout)</p>
+                    <p><span className="font-bold text-zinc-100">Validation de la Killzone :</span> Quelle session tradez-vous (Londres/NY/Asiatique) ? Est-on dans une fenêtre de haute volatilité propice à votre setup ?</p>
+                    <p><span className="font-bold text-zinc-100">Logique d'Invalidation (SL) :</span> Où est placé le SL par rapport à la structure intraday ? (Est-il cohérent avec l'ATR actuel ?)</p>
+                  </div>
+                </section>
+
+                {/* SECTION 3 */}
+                <section className="relative pl-4 border-l-2 border-blue-500/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4">
+                    3 — Gestion du Risque & Disciplines (Psychologie)
+                  </h4>
+                  <div className="space-y-3 text-[11px] text-zinc-300">
+                    <p><span className="font-bold text-zinc-100">Rapport Risque/Récompense (RR) :</span> Quel est votre objectif ? (Nous recommandons une cible > 1:2).</p>
+                    <p><span className="font-bold text-zinc-100">Exposition :</span> Quel est votre risque total en % du capital ?</p>
+                    <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Est-ce une entrée planifiée ou une réaction à l'impulsion actuelle (FOMO) ?</p>
+                    <p><span className="font-bold text-zinc-100">Règle de clôture :</span> Avez-vous conscience de la nécessité de clôturer avant la fin de session (00h00) ?</p>
+                  </div>
+                </section>
+
+                {/* DÉCISION FINALE (Homogène avec le Swing) */}
+                <section className="mt-8 p-6 bg-blue-600/10 border-2 border-blue-500/30 rounded-[32px] space-y-4">
+                  <div className="text-white font-black text-xs flex items-center gap-2 uppercase tracking-widest">
+                    <ShieldAlert size={16} className="text-blue-400" /> 🎯 Décision Finale
+                  </div>
+                  <div className="space-y-3 text-[10px] font-black uppercase tracking-wider">
+                    <div className="text-green-400">TOUTES conditions réunies : Trade autorisé.</div>
+                    <div className="text-yellow-400">Incohérence détectée : Trade à ajuster.</div>
+                    <div className="text-red-500">Incohérences multiples : Abstention recommandée.</div>
+                  </div>
+                  <div className="text-zinc-500 text-[9px] font-bold mt-4 border-t border-white/5 pt-4 italic uppercase">
+                    Règle d'or : Un trade n'est pas validé parce qu'il “semble bon”, mais parce qu'il s'inscrit dans une logique de gestion du risque cohérente.
+                  </div>
+                </section>
+              </div>
               ) : (
                 <div className="space-y-4 animate-in fade-in duration-200 font-sans">
                   <div className="flex items-center gap-2 text-green-400 font-black uppercase tracking-widest text-[9px]"><ShieldAlert size={12} /> 1 — AUDIT DE CLÔTURE DE SÉANCE GLOBAL</div>

@@ -514,47 +514,70 @@ export default function ScalpMode() {
                 </span>
               </div>
 
-              {/* LOGIQUE QUESTIONNAIRE SÉPARÉE ET COMPLÈTE */}
-              <div className="animate-in fade-in duration-300 font-sans space-y-6">
-                {sessionStatus === "DEBUT" ? (
-                  /* --- ÉTAT : DÉBUT DE SESSION (Checklist de Combat) --- */
-                  <>
-                    <section className="relative pl-4 border-l-2 border-yellow-500/50">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-yellow-400 mb-3">1 — Contexte & Filtres</h4>
-                      <div className="space-y-3 text-[11px] text-zinc-400">
-                        <div>
-                          • <span className="font-bold text-zinc-200">Calendrier Macro :</span> News "High Impact" dans les 30 min ?
-                          <HelpTooltip title="Calendrier Économique" content="La volatilité incontrôlée est l'ennemie du scalp." subVideos={[educationalContent.fundamental.calendrier]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
-                        </div>
-                        <div>
-                          • <span className="font-bold text-zinc-200">Corrélation & Sentiment :</span> Corrélation (DXY/VIX) et sentiment alignés ?
-                          <HelpTooltip title="Corrélation & Flux" content="DXY/VIX valident la direction du flux." subVideos={[educationalContent.fundamental.rendements]} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
-                        </div>
-                      </div>
-                    </section>
+              <div className="space-y-8 animate-in fade-in duration-200 font-sans">
+  
+                  {/* Message d'accueil / Pistes de réflexion */}
+                  <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+                    <h3 className="text-blue-400 font-bold uppercase text-[10px] tracking-widest mb-2">
+                      Garde-fous avant exécution (Scalp)
+                    </h3>
+                    <p className="text-zinc-400 text-[11px] leading-relaxed">
+                      Le scalping ne tolère aucune approximation. Ces points sont vos garde-fous pour 
+                      garantir une exécution chirurgicale et protéger votre capital de l'impulsivité :
+                    </p>
+                  </div>
 
-                    <section className="relative pl-4 border-l-2 border-red-500/50">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-3">2 — Audit d'Entrée</h4>
-                      <div className="space-y-3 text-[11px] text-zinc-400">
-                        <div>
-                          • <span className="font-bold text-zinc-200">Setup Institutionnel :</span> Quel déclencheur ? (Sweep, FVG, Breakout)
-                          <HelpTooltip title="Setup Scalp" content="Sois sélectif, attends ton setup." subVideos={educationalContent.technical.scalpSetups} onOpenVideo={(url: string) => setPlayingVideoUrl(getEmbedUrl(url))} />
-                        </div>
-                        <div>• <span className="font-bold text-zinc-200">Prix d'entrée & SL :</span> Invalidation technique indiscutable ?</div>
-                        <div>• <span className="font-bold text-zinc-200">Ratio Risque/Gain :</span> RR visé couvrant spreads/frais ?</div>
-                        <div>• <span className="font-bold text-zinc-200">Session :</span> Killzone de volatilité (Londres/NY) ?</div>
-                      </div>
-                    </section>
+                  {/* SECTION 1 - CONTEXTE & FILTRES */}
+                  <section className="relative pl-4 border-l-2 border-red-500/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
+                      1 — Contexte & Filtres
+                    </h4>
+                    <div className="space-y-3 text-[11px] text-zinc-300">
+                      <p><span className="font-bold text-zinc-100">Calendrier Macro :</span> News "High Impact" prévue dans les 30 prochaines minutes ?</p>
+                      <p><span className="font-bold text-zinc-100">Corrélation & Sentiment :</span> Les corrélations clés (DXY/VIX) et le sentiment global sont-ils alignés avec votre biais ?</p>
+                    </div>
+                  </section>
 
-                    <section className="relative pl-4 border-l-2 border-green-500/50">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-3">3 — Discipline & État</h4>
-                      <div className="space-y-3 text-[11px] text-zinc-400">
-                        <div>• <span className="font-bold text-zinc-200">Risque de session :</span> Risque max quotidien respecté ?</div>
-                        <div>• <span className="font-bold text-zinc-200">Discipline :</span> Confirmation réelle ou FOMO ?</div>
-                        <div>• <span className="font-bold text-zinc-200">Clarté Mentale :</span> 100% focus ?</div>
-                      </div>
-                    </section>
-                  </>
+                  {/* SECTION 2 - AUDIT D'ENTRÉE */}
+                  <section className="relative pl-4 border-l-2 border-red-500/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
+                      2 — Audit d'Entrée
+                    </h4>
+                    <div className="space-y-3 text-[11px] text-zinc-300">
+                      <p><span className="font-bold text-zinc-100">Setup Institutionnel :</span> Quel est le déclencheur précis ? (Ex: Sweep, FVG, Breakout)</p>
+                      <p><span className="font-bold text-zinc-100">Prix d'entrée & SL :</span> L'invalidation technique est-elle indiscutable ?</p>
+                      <p><span className="font-bold text-zinc-100">Ratio Risque/Gain :</span> Le RR visé est-il suffisant pour couvrir spreads et frais ?</p>
+                      <p><span className="font-bold text-zinc-100">Session :</span> Êtes-vous dans une Killzone de volatilité (Londres/NY) ?</p>
+                    </div>
+                  </section>
+
+                  {/* SECTION 3 - DISCIPLINE & ÉTAT */}
+                  <section className="relative pl-4 border-l-2 border-red-500/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-4">
+                      3 — Discipline & État
+                    </h4>
+                    <div className="space-y-3 text-[11px] text-zinc-300">
+                      <p><span className="font-bold text-zinc-100">Risque de session :</span> Votre risque max quotidien est-il respecté ?</p>
+                      <p><span className="font-bold text-zinc-100">Discipline :</span> Confirmation réelle ou simple FOMO ?</p>
+                      <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Êtes-vous à 100% de focus opérationnel ?</p>
+                    </div>
+                  </section>
+
+                  {/* DÉCISION FINALE (Homogène avec les autres modes) */}
+                  <section className="mt-8 p-6 bg-red-600/10 border-2 border-red-500/30 rounded-[32px] space-y-4">
+                    <div className="text-white font-black text-xs flex items-center gap-2 uppercase tracking-widest">
+                      <ShieldAlert size={16} className="text-red-400" /> 🎯 Décision Finale
+                    </div>
+                    <div className="space-y-3 text-[10px] font-black uppercase tracking-wider">
+                      <div className="text-green-400">TOUTES conditions réunies : Trade autorisé.</div>
+                      <div className="text-yellow-400">Incohérence détectée : Trade à ajuster.</div>
+                      <div className="text-red-500">Incohérences multiples : Abstention recommandée.</div>
+                    </div>
+                    <div className="text-zinc-500 text-[9px] font-bold mt-4 border-t border-white/5 pt-4 italic uppercase">
+                      Règle d'or : En cas de doute sur la précision de l'entrée, c'est un "NON" automatique. Le scalping ne tolère pas l'approximation.
+                    </div>
+                  </section>
+                </div>
                 ) : (
                   /* --- ÉTAT : CLÔTURE DE SESSION (Débriefing) --- */
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-4">
