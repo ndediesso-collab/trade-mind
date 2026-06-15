@@ -469,7 +469,7 @@ export default function SwingAnalysis() {
           <div className="flex items-center gap-4 border-l border-white/5 pl-6">
             <div className="flex flex-col">
               <span className="text-[8px] font-black uppercase text-zinc-500">RR</span>
-              <span className={`text-base font-mono font-black ${calculatedRR !== null && calculatedRR {' > '} 2 ? "text-green-400" : "text-zinc-400"}`}>
+              <span className={`text-base font-mono font-black ${calculatedRR !== null && calculatedRR > 2 ? "text-green-400" : "text-zinc-400"}`}>
                 {calculatedRR !== null ? `1:${calculatedRR}` : "N/A"}
               </span>
             </div>
@@ -477,7 +477,7 @@ export default function SwingAnalysis() {
             <div className="flex flex-col w-24">
               <div className="flex justify-between text-[8px] font-black uppercase text-zinc-500">
                 <span>Conviction</span>
-                <span className={conviction {' > '} 70 ? 'text-yellow-400' : 'text-blue-400'}>{conviction}%</span>
+                <span className={conviction  >  70 ? 'text-yellow-400' : 'text-blue-400'}>{conviction}%</span>
               </div>
               <input type="range" min="0" max="100" value={conviction} onChange={(e) => setConviction(parseInt(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-blue-600 mt-1" />
             </div>
