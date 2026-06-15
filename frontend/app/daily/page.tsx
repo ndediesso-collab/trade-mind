@@ -396,7 +396,7 @@ export default function DailyMode() {
 
   return (
     <AuroraBackground>
-      {/* HEADER ET BACK LINK */}
+      {/* HEADER ET BACK LINK DU SCALP MODE */}
       <div className="absolute top-4 left-6 z-50 flex items-center gap-4">
         <Link href="/">
           <button className="flex items-center gap-2 px-4 py-2 bg-[#0F1117]/90 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-all backdrop-blur-xl shadow-2xl">
