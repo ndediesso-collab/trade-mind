@@ -291,7 +291,7 @@ export default function SwingAnalysis() {
      setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
      return;
   }
-    setIaFeedback("> SYSTÈME: Injection SQL en cours...");
+    setIaFeedback("> SYSTÈME: Injection SQL en cours....");
     try {
       const res = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
