@@ -37,7 +37,7 @@ export default function SwingAnalysis() {
   const closeVideo = () => setPlayingVideoUrl(null);
 
   // 1. On utilise 'any' pour le dictionnaire afin de désactiver les erreurs de typage strict
-  const glossary: any = {
+  const educationalContent: any = {
     "OB": { definition: "L'Order Block est une zone d'accumulation institutionnelle.", url: "https://youtu.be/NYBvIcPX7XI?si=jmVr_qc31cduWcR_" },
     "FVG": { definition: "Le Fair Value Gap est un déséquilibre du prix.", url: "https://youtu.be/skk0sm6LN6M?si=momYUhKK-E1xLAuT" },
     "Liquidity": { definition: "Zones de concentration d'ordres stop.", url: "https://youtu.be/QPQWlXQ-El4?si=LgdQ-7m1VMiaiEwR" },
