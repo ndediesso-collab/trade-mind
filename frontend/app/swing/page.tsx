@@ -722,7 +722,7 @@ export default function SwingAnalysis() {
             value={analyse} 
             onChange={(e) => setAnalyse(e.target.value)} 
             className="flex-1 p-8 bg-transparent text-zinc-200 text-[12px] font-light leading-relaxed resize-none focus:outline-none custom-scrollbar font-sans" 
-            placeholder={isSuiviActive ? `Formulez vos arguments pour l'étape : ${questionsSuivi[currentStep].split(' - ')[0]}...` : "Déployez ici votre démonstration macro-économique, l'analyse des rendements et la convergence technique H4/Daily de votre configuration Forex..."} 
+            placeholder="Déployez ici votre démonstration macro-économique, l'analyse des rendements et la convergence technique H4/Daily de votre configuration Forex..." 
           />
         </section>
 
