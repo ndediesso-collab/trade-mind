@@ -334,16 +334,56 @@ export default function SwingAnalysis() {
     <AuroraBackground>
       <div className="relative z-10 w-full h-screen flex flex-col p-4 overflow-hidden bg-zinc-950/50 backdrop-blur-[2px]">
         
-        {/* Ton contenu complet va ici, SANS les erreurs de ternaire */}
-        {/* Assure-toi que chaque balise div ouverte a sa fermeture */}
-        
-        <div className="absolute top-4 left-4 z-50">
-          <Link href="/">
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#0F1117]/90 border border-white/10 rounded-xl text-zinc-400 hover:text-white">
-              <ChevronLeft size={14} /> Trade Mind Hub
-            </button>
+        {/* MODAL CALCULATEUR DE RISQUE */}
+        {showCalc && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-[420px] bg-[#0F1117] border border-blue-500/30 rounded-[32px] p-8 shadow-2xl">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <Calculator className="text-blue-400" size={24} />
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white font-sans">Risk Calculator</h3>
+                </div>
+                <button onClick={() => setShowCalc(false)} className="p-2 text-zinc-500 hover:text-white transition-all"><X size={20} /></button>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-2 font-sans text-left">
+                   <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Capital Total ($)</label>
+                   <input type="number" value={calcData.balance} onChange={(e) => setCalcData({...calcData, balance: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 text-white text-lg font-mono outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="10000" />
+                </div>
+                <div className="grid grid-cols-2 gap-4 font-sans text-left">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Risque (%)</label>
+                    <input type="number" value={calcData.risk} onChange={(e) => setCalcData({...calcData, risk: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 text-white text-lg font-mono outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="1" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Invalidation (Pips)</label>
+                    <input type="number" value={calcData.pips} onChange={(e) => setCalcData({...calcData, pips: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-2xl p-4 text-white text-lg font-mono outline-none focus:border-blue-500 transition-all shadow-inner" placeholder="20" />
+                  </div>
+                </div>
+                <button onClick={calculatePositionSize} className="w-full py-5 bg-blue-600 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] text-white hover:bg-blue-500 active:scale-[0.98] transition-all shadow-lg shadow-blue-900/40 font-sans">Calculer le Volume</button>
+                <div className={`mt-4 p-6 rounded-3xl border transition-all duration-500 ${lotResult !== null ? 'bg-blue-500/10 border-blue-500/40 opacity-100' : 'bg-zinc-900/50 border-white/5 opacity-40'}`}>
+                  <div className="flex justify-between items-end font-sans">
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Dimensionnement</p>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-tighter text-left">Taille de lot optimale</h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-4xl font-mono font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">{lotResult !== null ? lotResult : "0.00"}</span>
+                      <span className="ml-2 text-xs font-black text-blue-400 uppercase">Lots</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1. TOP HEADER NAVIGATION (MODIFIÉ) */}
+        <header className="h-14 flex items-center justify-between px-6 mb-3 bg-[#0F1117]/90 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl">
+          <Link href="/" className="text-zinc-400 hover:text-white flex items-center gap-2 transition-all group font-sans">
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-100">Trade Mind Hub</span>
           </Link>
-        </div>
           <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-900/50 rounded-xl border border-white/5">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Audit Stratégique Scalp</span>
           </div>
