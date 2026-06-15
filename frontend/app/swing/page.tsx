@@ -28,7 +28,7 @@ import ReactPlayer from 'react-player';
 
 // --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
 
-export default function SwingAnalysis() {
+export default function SwingAnalysis() { 
   
   const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
   const closeVideo = () => setPlayingVideoUrl(null);
@@ -256,16 +256,16 @@ export default function SwingAnalysis() {
       return;
     }
     if (calculatedRR !== null && calculatedRR < 2) {
-      setIaFeedback("> BLOCAGE GESTION DU RISQUE: Le ratio RR calculé est inférieur à 1:2. Trade rejeté d'office par le système.");
+      setIaFeedback("> BLOCAGE GESTION DU RISQUE: Le ratio RR calculé est inférieur à 1:2. Trade rejeté d'office.");
       return;
     }
     if (conviction < 50) {
-      setIaFeedback("> BLOCAGE PSYCHOLOGIQUE: Une conviction inférieure à 50% dénote un manque de clarté. Exécution interdite.");
+      setIaFeedback("> BLOCAGE PSYCHOLOGIQUE: Une conviction inférieure à 50% dénote un manque de clarté.");
       return;
     }
 
     setIsLoading(true);
-    setConsoleTab("ARCHITECTE"); // Forcer le focus visuel sur l'audit technique
+    setConsoleTab("ARCHITECTE");
     try {
       const res = await fetch("https://trade-mind-w6rs.onrender.com/analyse/swing", {
         method: "POST",
@@ -284,8 +284,19 @@ export default function SwingAnalysis() {
           calculated_rr: calculatedRR
         })
       });
-      const data = await res.json();
       
+      const data = await res.json();
+      if (res.ok) {
+        setIaFeedback(data.feedback || "> ANALYSE: Traitement effectué avec succès.");
+      } else {
+        setIaFeedback("> ERREUR: Le moteur d'analyse a rejeté la requête.");
+      }
+    } catch (e) {
+      setIaFeedback("> ERREUR: Connexion au moteur d'analyse impossible.");
+    } finally {
+      setIsLoading(false);
+    }
+  }; 
   const handleSave = async () => {
   if (statut !== "BROUILLON") {
      setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
@@ -707,5 +718,4 @@ export default function SwingAnalysis() {
       </div>
     </AuroraBackground>
   );
-  
 }
