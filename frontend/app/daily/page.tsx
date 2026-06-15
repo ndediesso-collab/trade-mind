@@ -563,7 +563,7 @@ export default function DailyMode() {
                     3 — Gestion du Risque & Disciplines (Psychologie)
                   </h4>
                   <div className="space-y-3 text-[11px] text-zinc-300">
-                    <p><span className="font-bold text-zinc-100">Rapport Risque/Récompense (RR) :</span> Quel est votre objectif ? (Nous recommandons une cible > 1:2).</p>
+                    <p><span className="font-bold text-zinc-100">Rapport Risque/Récompense (RR) :</span> Quel est votre objectif ? (Nous recommandons une cible {'>'} 1:2).</p>
                     <p><span className="font-bold text-zinc-100">Exposition :</span> Quel est votre risque total en % du capital ?</p>
                     <p><span className="font-bold text-zinc-100">Clarté Mentale :</span> Est-ce une entrée planifiée ou une réaction à l'impulsion actuelle (FOMO) ?</p>
                     <p><span className="font-bold text-zinc-100">Règle de clôture :</span> Avez-vous conscience de la nécessité de clôturer avant la fin de session (00h00) ?</p>

@@ -78,7 +78,6 @@ export default function SwingAnalysis() {
   
 
   // --- ÉTATS GÉNÉRAUX & IDENTITY ---
-  const [mode, setMode] = useState("Étudiant");
   const [position, setPosition] = useState<"ACHAT" | "VENTE" | "NEUTRE">("NEUTRE");
   const [statut, setStatut] = useState<"BROUILLON" | "WIN" | "LOSS">("BROUILLON");
   const [actif, setActif] = useState("");
@@ -139,7 +138,6 @@ export default function SwingAnalysis() {
               setCurrentTradeId(fullTrade.id);
               setActif(fullTrade.actif || "");
               setAnalyse((fullTrade.analyse || "").replace("[PLAN AVANT-TRADE] : ", ""));
-              setMode(fullTrade.mode || "Étudiant");
               setConviction(fullTrade.conviction || 50);
               setPosition(fullTrade.position || "Neutre");
               setStatut(fullTrade.statut || "Brouillon");
@@ -169,7 +167,6 @@ export default function SwingAnalysis() {
           setCurrentTradeId(parsed.currentTradeId || null);
           setActif(parsed.actif || "");
           setAnalyse(parsed.analyse || "");
-          setMode(parsed.mode || "Étudiant");
           setConviction(parsed.conviction || 50);
           setPosition(parsed.position || "Neutre");
           setStatut(parsed.statut || "Brouillon");
@@ -190,14 +187,14 @@ export default function SwingAnalysis() {
   useEffect(() => {
     const handler = setTimeout(() => {
       const cache = { 
-        currentTradeId, actif, analyse, mode, conviction, position, statut, 
+        currentTradeId, actif, analyse, conviction, position, statut, 
         currentStep, isSuiviActive, feedback: iaFeedback,
         entryPrice, stopLoss, takeProfit, guardianHistory
       };
       localStorage.setItem("tm_swing_cache_v2", JSON.stringify(cache));
     }, 500);
     return () => clearTimeout(handler);
-  }, [currentTradeId, actif, analyse, mode, conviction, position, statut, currentStep, isSuiviActive, iaFeedback, entryPrice, stopLoss, takeProfit, guardianHistory]);
+  }, [currentTradeId, actif, analyse, conviction, position, statut, currentStep, isSuiviActive, iaFeedback, entryPrice, stopLoss, takeProfit, guardianHistory]);
 
   // --- MODAL CALCULATEUR ---
   const [showCalc, setShowCalc] = useState(false);
@@ -278,8 +275,7 @@ export default function SwingAnalysis() {
           analyse, 
           conviction, 
           position, 
-          statut, 
-          mode, 
+          statut,  
           step: currentStep, 
           type: "SWING",
           entry_price: entryPrice,
@@ -290,24 +286,6 @@ export default function SwingAnalysis() {
       });
       const data = await res.json();
       
-      if (mode === "Suivi IA") {
-        if (data.validated || data.status === "success") {
-          setIaFeedback(`> MENTOR_IA: Validation validée sur l'analyse de l'étape.\n${data.feedback || data.verdict}`);
-          setCurrentStep(prev => prev + 1);
-          setAnalyse(""); 
-        } else {
-          setIaFeedback(`> MENTOR_IA: RÉVISION STRATÉGIQUE REQUISE sur l'étape ${currentStep + 1}.\n${data.feedback || data.verdict}`);
-        }
-      } else {
-        setIaFeedback(`> MENTOR_IA: ${data.feedback || data.verdict}`);
-      }
-    } catch (e) {
-      setIaFeedback("> ERREUR: Synapse de communication Python déconnectée.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSave = async () => {
   if (statut !== "BROUILLON") {
      setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
@@ -324,8 +302,7 @@ export default function SwingAnalysis() {
           analyse, 
           conviction, 
           position, 
-          statut, 
-          mode, 
+          statut,  
           type: "SWING",
           entry_price: entryPrice,
           stop_loss: stopLoss,
@@ -407,19 +384,12 @@ export default function SwingAnalysis() {
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-100">Trade Mind Hub</span>
           </Link>
-
-          {/* Nouveau Header simplifié : Plus de boutons de sous-modes */}
           <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-900/50 rounded-xl border border-white/5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
-              Audit Stratégique Swing
-            </span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Audit Stratégique Scalp</span>
           </div>
-
-          <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/30">
-            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-            <span className="text-[9px] font-black text-blue-400 tracking-[0.2em] uppercase font-sans">
-              MODE_SWING
-            </span>
+          <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full border border-red-500/30">
+            <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
+            <span className="text-[9px] font-black text-red-400 tracking-[0.2em] uppercase font-sans">MODE_SCALP</span>
           </div>
         </header>
 
@@ -455,7 +425,6 @@ export default function SwingAnalysis() {
 
           {/* BLOC 2: CONTRÔLES DYNAMIQUES */}
           <div className="flex items-center gap-6 border-l border-white/5 pl-6">
-            {/* Direction */}
             <div className="flex flex-col gap-1">
               <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">Position</span>
               <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10">
@@ -472,8 +441,6 @@ export default function SwingAnalysis() {
               </div>
             </div>
 
-            {/* Statut Trade */}
-            {/* Statut Trade - Logique simplifiée */}
             <div className="flex flex-col gap-1">
               <span className="text-[8px] font-black uppercase text-zinc-500 tracking-wider">État</span>
               <div className="flex gap-2">
@@ -502,7 +469,7 @@ export default function SwingAnalysis() {
           <div className="flex items-center gap-4 border-l border-white/5 pl-6">
             <div className="flex flex-col">
               <span className="text-[8px] font-black uppercase text-zinc-500">RR</span>
-              <span className={`text-base font-mono font-black ${calculatedRR && calculatedRR >= 2 ? "text-green-400" : "text-zinc-400"}`}>
+              <span className={`text-base font-mono font-black ${calculatedRR !== null && calculatedRR {' > '} 2 ? "text-green-400" : "text-zinc-400"}`}>
                 {calculatedRR !== null ? `1:${calculatedRR}` : "N/A"}
               </span>
             </div>
@@ -510,7 +477,7 @@ export default function SwingAnalysis() {
             <div className="flex flex-col w-24">
               <div className="flex justify-between text-[8px] font-black uppercase text-zinc-500">
                 <span>Conviction</span>
-                <span className={conviction > 70 ? 'text-yellow-400' : 'text-blue-400'}>{conviction}%</span>
+                <span className={conviction {' > '} 70 ? 'text-yellow-400' : 'text-blue-400'}>{conviction}%</span>
               </div>
               <input type="range" min="0" max="100" value={conviction} onChange={(e) => setConviction(parseInt(e.target.value))} className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-blue-600 mt-1" />
             </div>
@@ -585,7 +552,7 @@ export default function SwingAnalysis() {
                 <div className="space-y-4 text-zinc-400 text-[11px]">
                   <div><span className="text-zinc-200 font-bold">Logique d'entrée (Timing) :</span> Pourquoi ce moment précis ?</div>
                   <div><span className="text-zinc-200 font-bold">Invalidation (SL) :</span> Où se situe votre niveau d'invalidation technique ?</div>
-                  <div><span className="text-zinc-200 font-bold">Ratio Risque/Récompense (RR) :</span> Quel est votre ratio cible ? (Cible > 1:2 conseillé).</div>
+                  <div><span className="text-zinc-200 font-bold">Ratio Risque/Récompense (RR) :</span> Quel est votre ratio cible ? (Cible {' > '} 1:2 conseillé).</div>
                   <div><span className="text-zinc-200 font-bold">Validation technique :</span> Votre setup est-il pleinement confirmé ?</div>
                 </div>
               </section>
@@ -609,7 +576,9 @@ export default function SwingAnalysis() {
               </section>
 
             </div>
+            </div>
           </div>
+          
           {/* DROITE : TERMINAL NEURAL AUDIT STREAM */}
           <div className="flex-1 flex flex-col bg-[#0F1117] border border-white/10 rounded-2xl p-4 gap-3 shadow-2xl relative overflow-hidden">
             
@@ -706,9 +675,6 @@ export default function SwingAnalysis() {
                 <button onClick={handleReset} title="Reset Work" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"><RotateCcw size={15} /></button>
                 <button onClick={handleSave} title="Archiver SQL" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"><Save size={15} /></button>
               </div>
-              <button onClick={handleAnalyse} disabled={isLoading || (mode === "Suivi IA" && !isSuiviActive)} className="flex-1 h-10 bg-blue-600 hover:bg-blue-500 disabled:opacity-20 text-white rounded-xl flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-[0.2em] transition-all shadow-md active:scale-95">
-                {mode === "Suivi IA" ? <><Send size={14} /> Valider_L_Étape</> : <><BrainCircuit size={15} /> Lancer_L_Audit</>}
-              </button>
             </div>
           </div>
         </div>

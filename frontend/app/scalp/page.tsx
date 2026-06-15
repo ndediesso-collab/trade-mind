@@ -515,7 +515,7 @@ export default function ScalpMode() {
               </div>
 
               <div className="space-y-8 animate-in fade-in duration-200 font-sans">
-  
+ 
                   {/* Message d'accueil / Pistes de réflexion */}
                   <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
                     <h3 className="text-blue-400 font-bold uppercase text-[10px] tracking-widest mb-2">
@@ -563,7 +563,7 @@ export default function ScalpMode() {
                     </div>
                   </section>
 
-                  {/* DÉCISION FINALE (Homogène avec les autres modes) */}
+                  {/* DÉCISION FINALE */}
                   <section className="mt-8 p-6 bg-red-600/10 border-2 border-red-500/30 rounded-[32px] space-y-4">
                     <div className="text-white font-black text-xs flex items-center gap-2 uppercase tracking-widest">
                       <ShieldAlert size={16} className="text-red-400" /> 🎯 Décision Finale
@@ -578,25 +578,24 @@ export default function ScalpMode() {
                     </div>
                   </section>
                 </div>
-                ) : (
-                  /* --- ÉTAT : CLÔTURE DE SESSION (Débriefing) --- */
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-4">
-                    <div className="space-y-3">
-                      <div className="text-red-400 font-black uppercase text-[9px] tracking-widest">1 — Résultat & Métriques</div>
-                      <div className="text-[11px] text-zinc-400">Veuillez formuler une rédaction qui prend en compte :</div>
-                      <div className="text-[11px] text-zinc-400">• Trades exécutés : <span className="text-white font-bold">{scalcWin + scalcLoss + scalcBe}</span></div>
-                      <div className="text-[11px] text-zinc-400">• Ratio W/L : <span className="text-white font-bold">{scalcWin}W - {scalcLoss}L</span></div>
-                    </div>
-                    
-                    <div className="space-y-3 text-[11px] text-zinc-400">
-                      <div className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[9px] tracking-widest"><ShieldAlert size={12}/> Action Requise</div>
-                      <div>• Respect du plan, tailles et Drawdown ?</div>
-                      <div>• Détection de sur-trading ou impulsivité ?</div>
-                      <div className="text-zinc-100 italic">• Note finale d'exécution (0-10).</div>
-                    </div>
+              ) : (
+                /* --- ÉTAT : CLÔTURE DE SESSION (Débriefing) --- */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-white/5 pt-4">
+                  <div className="space-y-3">
+                    <div className="text-red-400 font-black uppercase text-[9px] tracking-widest">1 — Résultat & Métriques</div>
+                    <div className="text-[11px] text-zinc-400">Veuillez formuler une rédaction qui prend en compte :</div>
+                    <div className="text-[11px] text-zinc-400">• Trades exécutés : <span className="text-white font-bold">{scalcWin + scalcLoss + scalcBe}</span></div>
+                    <div className="text-[11px] text-zinc-400">• Ratio W/L : <span className="text-white font-bold">{scalcWin}W - {scalcLoss}L</span></div>
                   </div>
-                )}
-              </div>
+                  
+                  <div className="space-y-3 text-[11px] text-zinc-400">
+                    <div className="flex items-center gap-1.5 text-red-500 font-black uppercase text-[9px] tracking-widest"><ShieldAlert size={12}/> Action Requise</div>
+                    <div>• Respect du plan, tailles et Drawdown ?</div>
+                    <div>• Détection de sur-trading ou impulsivité ?</div>
+                    <div className="text-zinc-100 italic">• Note finale d'exécution (0-10).</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Boîte de Rédaction Sémantique */}
@@ -622,7 +621,7 @@ export default function ScalpMode() {
                     </>
                   ) : (
                     <button onClick={launchIaAudit} disabled={isLoading} className="flex items-center gap-1.5 px-5 py-2 bg-red-600 rounded-xl text-white font-black text-[9px] uppercase tracking-wider hover:bg-red-500 disabled:opacity-40 transition-all shadow-lg shadow-red-950/20">
-                      <Activity size={12} /> Clôturer & Lancer l&apos;Audit IA
+                      <Activity size={12} /> Clôturer {'&'} Lancer l&apos;Audit IA
                     </button>
                   )}
                 </div>
@@ -714,6 +713,7 @@ export default function ScalpMode() {
 
           </div>
         </div>
+
         {playingVideoUrl && (
           <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 lg:p-12 backdrop-blur-xl" onClick={closeVideo}>
             <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-5xl aspect-video rounded-[32px] shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
