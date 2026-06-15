@@ -699,8 +699,8 @@ export default function ScalpMode() {
             </div>
           </div>
         )}
-
-      </div>
     </AuroraBackground>
   );
-}
+}    
+        
+       
