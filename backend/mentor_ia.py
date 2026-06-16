@@ -497,9 +497,6 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     user_settings = getattr(app_instance, 'user_settings', {})
     severite = user_settings.get("ia_severite", "Neutre")
     
-    # 2. RÉCUPÉRATION DYNAMIQUE DU GUIDE
-    guide_contenu = GUIDES_QUESTIONNAIRES.get(mode.upper(), "1. Analyse structurelle. 2. Gestion risque.")
-    
     # 3. CONTEXTUALISATION DES DONNÉES ISOLÉES
     # Si le trader a rempli des champs spécifiques, on les injecte ici
     donnees_techniques = ""
@@ -681,7 +678,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         - Analyse le raisonnement fourni par le trader : identifie les points forts et les angles morts (ce qu'il n'a pas mentionné et qui représente un risque).
         - Si une partie cruciale de l'analyse (ex: Risque, Setup) est absente, ne la rejette pas : questionne le trader avec bienveillance pour stimuler sa propre analyse.
         - Ton rôle est de combler les zones d'ombre en t'appuyant sur ces standards institutionnels.
-        
+
         ═══════════════════════
         1. AUDIT D'EXÉCUTION (AVANT TRADE)
         ═══════════════════════
