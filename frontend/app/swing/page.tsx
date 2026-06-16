@@ -696,6 +696,15 @@ export default function SwingAnalysis() {
                       <div key={i} className={line.startsWith('>') ? 'text-blue-400 font-sans font-black tracking-tight' : 'text-zinc-300 font-sans text-[11px]'}>{line}</div>
                     ))}
                   </div>
+                  {/* AJOUTE CE BOUTON ICI : */}
+                  <button 
+                    onClick={handleAnalyse} 
+                    disabled={isLoading}
+                    className="w-full mt-2 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl text-blue-400 font-black text-[9px] uppercase tracking-widest hover:bg-blue-600/40 transition-all flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? <Activity size={12} className="animate-spin" /> : <Zap size={12} />}
+                    Lancer l'Audit IA
+                  </button>
                 </div>
               )}
             </div>
