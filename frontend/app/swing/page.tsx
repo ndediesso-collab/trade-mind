@@ -415,11 +415,11 @@ export default function SwingAnalysis() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-100">Trade Mind Hub</span>
           </Link>
           <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-900/50 rounded-xl border border-white/5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Audit Stratégique Scalp</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Audit Stratégique Swing</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full border border-red-500/30">
             <div className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
-            <span className="text-[9px] font-black text-red-400 tracking-[0.2em] uppercase font-sans">MODE_SCALP</span>
+            <span className="text-[9px] font-black text-red-400 tracking-[0.2em] uppercase font-sans">MODE SWING</span>
           </div>
         </header>
 
@@ -696,27 +696,37 @@ export default function SwingAnalysis() {
                       <div key={i} className={line.startsWith('>') ? 'text-blue-400 font-sans font-black tracking-tight' : 'text-zinc-300 font-sans text-[11px]'}>{line}</div>
                     ))}
                   </div>
-                  {/* AJOUTE CE BOUTON ICI : */}
-                  <button 
-                    onClick={handleAnalyse} 
-                    disabled={isLoading}
-                    className="w-full mt-2 py-2 bg-blue-600/20 border border-blue-500/30 rounded-xl text-blue-400 font-black text-[9px] uppercase tracking-widest hover:bg-blue-600/40 transition-all flex items-center justify-center gap-2"
-                  >
-                    {isLoading ? <Activity size={12} className="animate-spin" /> : <Zap size={12} />}
-                    Lancer l'Audit IA
-                  </button>
                 </div>
               )}
             </div>
 
             <div className="flex gap-2 font-sans">
-              <div className="flex gap-1">
-                <button onClick={handleReset} title="Reset Work" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"><RotateCcw size={15} /></button>
-                <button onClick={handleSave} title="Archiver SQL" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"><Save size={15} /></button>
-              </div>
+            <div className="flex gap-1">
+              <button 
+                onClick={handleReset} 
+                title="Reset Work" 
+                className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"
+              >
+                <RotateCcw size={15} />
+              </button>
+              <button 
+                onClick={handleSave} 
+                title="Archiver SQL" 
+                className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"
+              >
+                <Save size={15} />
+              </button>
+              {/* Nouveau bouton Audit IA intégré ici */}
+              <button 
+                onClick={handleAnalyse} 
+                disabled={isLoading}
+                title="Lancer l'Audit IA" 
+                className={`w-10 h-10 border border-white/5 rounded-xl flex items-center justify-center transition-all ${isLoading ? 'bg-blue-600/50 text-white' : 'bg-zinc-900 text-blue-400 hover:text-blue-300 hover:bg-zinc-800'}`}
+              >
+                {isLoading ? <Activity size={15} className="animate-spin" /> : <Zap size={15} />}
+              </button>
             </div>
           </div>
-        </div>
 
         {/* 4. WORKSPACE DE RÉDACTION SÉMANTIQUE */}
         <section className="flex-1 flex flex-col bg-[#0F1117] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl relative">
