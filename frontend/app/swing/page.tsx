@@ -701,32 +701,17 @@ export default function SwingAnalysis() {
             </div>
 
             <div className="flex gap-2 font-sans">
-            <div className="flex gap-1">
-              <button 
-                onClick={handleReset} 
-                title="Reset Work" 
-                className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"
-              >
-                <RotateCcw size={15} />
-              </button>
-              <button 
-                onClick={handleSave} 
-                title="Archiver SQL" 
-                className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"
-              >
-                <Save size={15} />
-              </button>
-              {/* Nouveau bouton Audit IA intégré ici */}
-              <button 
-                onClick={handleAnalyse} 
-                disabled={isLoading}
-                title="Lancer l'Audit IA" 
-                className={`w-10 h-10 border border-white/5 rounded-xl flex items-center justify-center transition-all ${isLoading ? 'bg-blue-600/50 text-white' : 'bg-zinc-900 text-blue-400 hover:text-blue-300 hover:bg-zinc-800'}`}
-              >
-                {isLoading ? <Activity size={15} className="animate-spin" /> : <Zap size={15} />}
-              </button>
+              <div className="flex gap-1">
+                <button onClick={handleReset} title="Reset Work" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"><RotateCcw size={15} /></button>
+                <button onClick={handleSave} title="Archiver SQL" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"><Save size={15} /></button>
+                </button>
+                <button onClick={handleAnalyse} title="Audit IA" className="w-10 h-10 bg-zinc-900 border border-white/5 text-blue-400 rounded-xl hover:text-blue-300 flex items-center justify-center transition-all">
+                  <Activity size={15} />
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
         {/* 4. WORKSPACE DE RÉDACTION SÉMANTIQUE */}
         <section className="flex-1 flex flex-col bg-[#0F1117] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl relative">
