@@ -702,11 +702,26 @@ export default function SwingAnalysis() {
 
             <div className="flex gap-2 font-sans">
               <div className="flex gap-1">
-                <button onClick={handleReset} title="Reset Work" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"><RotateCcw size={15} /></button>
-                <button onClick={handleSave} title="Archiver SQL" className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"><Save size={15} /></button>
+                <button 
+                  onClick={handleReset} 
+                  title="Reset Work" 
+                  className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"
+                >
+                  <RotateCcw size="{15}"/>
                 </button>
-                <button onClick={handleAnalyse} title="Audit IA" className="w-10 h-10 bg-zinc-900 border border-white/5 text-blue-400 rounded-xl hover:text-blue-300 flex items-center justify-center transition-all">
-                  <Activity size={15} />
+                <button 
+                  onClick={handleSave} 
+                  title="Archiver SQL" 
+                  className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"
+                >
+                  <Save size="{15}"/>
+                </button>
+                <button 
+                  onClick={handleAnalyse} 
+                  title="Audit IA" 
+                  className="w-10 h-10 bg-zinc-900 border border-white/5 text-blue-400 rounded-xl hover:text-blue-300 flex items-center justify-center transition-all"
+                >
+                  <Activity size="{15}"/>
                 </button>
               </div>
             </div>
