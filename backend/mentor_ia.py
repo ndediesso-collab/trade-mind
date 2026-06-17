@@ -591,6 +591,8 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
 
     # 4. LOGIQUE DE SÉLECTION DU MODE (SQUELETTE DYNAMIQUE)
     mode_upper = mode.upper()
+    role_titre="Analyste trading" 
+    mission_specifique = "Accompagner le trader dans son analyse."
     
     if mode_upper == "DAILY":
         role_titre = "Auditeur Intraday & Risk Manager de Session"
@@ -928,8 +930,8 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     ═══════════════════════════════
     TON & POSTURE (Institutionnelle & Directe)
     ═══════════════════════════════
-    {instructions_severite[Exigeant]}
-    {instructions_pedagogiques[Exigeant]}
+    {instructions_severite["Exigeant"]}
+    {instructions_pedagogiques["Exigeant"]}
     - Sois froid, professionnel et factuel. 
     - Ne cherche pas à consoler : si le plan présente une faille, expose-la. 
     - Si le plan est correct, confirme la solidité de la réflexion.
@@ -964,7 +966,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         response = client_architect.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : {Exigeant}."}, 
+                {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : {"Exigeant"}."}, 
                 {"role": "user", "content": prompt}
             ]
         )
