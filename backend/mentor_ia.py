@@ -489,6 +489,9 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     # FORÇAGE DU MODE POUR ÉVITER LES ERREURS
     mode = str(mode) if mode else "SWING" 
     mode_upper = mode.upper()
+    role_titre = "Analyste Trading"
+    mission_specifique = "Accompagner le trader dans son analyse."
+    instructions_mode = "Adopte une posture professionnelle et factuelle."
     """
     Fonction principale d'appel à l'API OpenAI avec spécialisation dynamique par mode.
     Conserve le prompt original pour le mode SWING.
@@ -590,11 +593,9 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
 
     # 4. LOGIQUE DE SÉLECTION DU MODE (SQUELETTE DYNAMIQUE)
-    mode_upper = mode.upper()
-    role_titre="Analyste trading" 
-    mission_specifique = "Accompagner le trader dans son analyse."
     
     if mode_upper == "DAILY":
+        GUIDE_REFLEXION = GUIDE_REFLEXION_DAILY
         role_titre = "Auditeur Intraday & Risk Manager de Session"
         mission_specifique = (
             "Évaluer la cohérence du plan intraday avant exécution, "
@@ -614,7 +615,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         MÉTHODOLOGIE D'AUDIT (BASÉE SUR LE GUIDE DE RÉFÉRENCE)
         ═══════════════════════════════
         - Référence de qualité : Utilise le guide ci-dessous comme standard institutionnel :
-        {GUIDE_REFLEXION_DAILY}
+        {GUIDE_REFLEXION}
         - Le trader est libre de sa méthode. Il utilise ce guide comme une aide optionnelle à la réflexion.
         - Analyse le raisonnement fourni par le trader : identifie les points forts et les angles morts (ce qu'il n'a pas mentionné et qui représente un risque).
         - Si une partie cruciale de l'analyse (ex: Risque, Structure) est absente, ne la rejette pas : questionne le trader avec bienveillance pour stimuler sa propre analyse.
@@ -656,6 +657,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         """
     
     elif mode_upper == "SCALP":
+        GUIDE_REFLEXION = GUIDE_REFLEXION_SCALP
         role_titre = "Coach de Performance Scalping & Analyste d’Exécution"
         mission_specifique = (
             "Débriefing de fin de session : analyser la discipline, "
@@ -675,7 +677,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         MÉTHODOLOGIE D'AUDIT (BASÉE SUR LE GUIDE DE RÉFÉRENCE)
         ═══════════════════════════════
         - Référence de qualité : Utilise le guide ci-dessous comme standard institutionnel pour challenger la réflexion :
-          {GUIDE_REFLEXION_SCALP}
+          {GUIDE_REFLEXION}
         - Le trader est libre de sa méthode. Il utilise ce guide comme une aide optionnelle à la réflexion.
         - Analyse le raisonnement fourni par le trader : identifie les points forts et les angles morts (ce qu'il n'a pas mentionné et qui représente un risque).
         - Si une partie cruciale de l'analyse (ex: Risque, Setup) est absente, ne la rejette pas : questionne le trader avec bienveillance pour stimuler sa propre analyse.
@@ -891,9 +893,11 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         """
 
     # 4. LE PROMPT FINAL (Mode SWING - Audit Stratégique & Comportemental)
+    GUIDE_REFLEXION = GUIDE_REFLEXION_SWING
     prompt = f"""
     TU ES : {role_titre}. 
     Ta mission principale : {mission_specifique}
+    GUIDE DE REFLEXION :{GUIDE_REFLEXION}
     
     TON RÔLE : Tu es un Mentor Trading et un expert en audit comportemental. Ton rôle est d'orienter la réflexion du trader vers une approche institutionnelle, alliant lecture technique et fondamentale.
     
@@ -904,7 +908,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     MÉTHODOLOGIE D'AUDIT (BASÉE SUR LE GUIDE DE RÉFÉRENCE)
     ═══════════════════════════════
     - Référence de qualité : Utilise le guide ci-dessous comme standard institutionnel :
-      {GUIDE_REFLEXION_SWING}
+      {GUIDE_REFLEXION}
     - Le trader est libre de sa méthode. Il utilise ce guide comme une aide optionnelle à la réflexion.
     - Analyse le raisonnement fourni par le trader : identifie les points forts et les angles morts (ce qu'il n'a pas mentionné et qui représente un risque).
     - Si une partie cruciale de l'analyse (ex: Risque, Structure) est absente, ne la rejette pas : questionne le trader avec bienveillance pour stimuler sa propre analyse.
