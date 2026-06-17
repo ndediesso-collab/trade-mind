@@ -60,30 +60,43 @@ export default function SwingAnalysis() {
     subVideos, 
     conceptKey, 
     onOpenVideo 
-    }: { 
+  }: { 
     title?: string, 
     content?: string, 
     subVideos?: any[], 
     conceptKey?: string, 
     onOpenVideo: (url: string) => void 
-    }) => {
+  }) => {
     const [show, setShow] = useState(false);
-    const data = conceptKey ? glossary[conceptKey] : null;
+    
+    // Sécurité : Vérifie que le glossary existe avant d'accéder à la clé
+    const data = (conceptKey && typeof glossary !== 'undefined') ? glossary[conceptKey] : null;
 
     return (
-      <div className="relative inline-block ml-1" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <span 
+        className="relative inline-block ml-1" 
+        onMouseEnter={() => setShow(true)} 
+        onMouseLeave={() => setShow(false)}
+      >
         <Info size={12} className="inline text-blue-500 cursor-help" />
+        
         {show && (
-          <div className="absolute z-[100] left-0 bottom-6 w-64 bg-[#161B22] border border-blue-500/30 p-4 rounded-2xl shadow-2xl">
-            {/* Affiche le titre/contenu si passé en props, sinon le glossaire */}
-            <p className="text-[10px] font-bold text-white mb-2 uppercase tracking-wider">{title || (data ? conceptKey : "")}</p>
-            <p className="text-[10px] text-zinc-300 mb-3">{content || (data ? data.definition : "")}</p>
+          <div className="absolute z-[9999] left-0 bottom-6 w-64 bg-[#161B22] border border-blue-500/30 p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95">
+            <p className="text-[10px] font-bold text-white mb-2 uppercase tracking-wider">
+              {title || (data ? conceptKey : "Information")}
+            </p>
+            <p className="text-[10px] text-zinc-300 mb-3">
+              {content || (data ? data.definition : "Définition indisponible.")}
+            </p>
             
-            {/* Affiche les vidéos si passées en props, sinon celle du glossaire */}
             {(subVideos || (data ? [data] : [])).map((v: any, i: number) => (
               <button 
                 key={i} 
-                onClick={() => onOpenVideo(v.url)} 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onOpenVideo(v.url);
+                }} 
                 className="block w-full text-left text-[9px] font-black uppercase text-blue-400 hover:text-white py-1 transition-colors"
               >
                 • {v.title || "Voir vidéo"}
@@ -91,7 +104,7 @@ export default function SwingAnalysis() {
             ))}
           </div>
         )}
-      </div>
+      </span>
     );
   };
   
@@ -707,21 +720,21 @@ export default function SwingAnalysis() {
                   title="Reset Work" 
                   className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-red-400 flex items-center justify-center transition-all"
                 >
-                  <RotateCcw size="{15}"/>
+                  <RotateCcw size={15}/>
                 </button>
                 <button 
                   onClick={handleSave} 
                   title="Archiver SQL" 
                   className="w-10 h-10 bg-zinc-900 border border-white/5 text-zinc-500 rounded-xl hover:text-green-400 flex items-center justify-center transition-all"
                 >
-                  <Save size="{15}"/>
+                  <Save size={15}/>
                 </button>
                 <button 
                   onClick={handleAnalyse} 
                   title="Audit IA" 
                   className="w-10 h-10 bg-zinc-900 border border-white/5 text-blue-400 rounded-xl hover:text-blue-300 flex items-center justify-center transition-all"
                 >
-                  <Activity size="{15}"/>
+                  <Activity size={15}/>
                 </button>
               </div>
             </div>
