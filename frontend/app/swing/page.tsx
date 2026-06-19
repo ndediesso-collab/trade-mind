@@ -26,17 +26,7 @@ import {
 import Link from "next/link";
 import ReactPlayer from 'react-player';
 
-// --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
-
-export default function SwingAnalysis() { 
-
-  // Ajoute ces deux lignes avec tes autres useState :
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isSuiviActive, setIsSuiviActive] = useState(false);
-  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
-  const closeVideo = () => setPlayingVideoUrl(null);
-
-  // 1. On utilise 'any' pour le dictionnaire afin de désactiver les erreurs de typage strict
+// 1. On utilise 'any' pour le dictionnaire afin de désactiver les erreurs de typage strict
   const glossary: any = {
     "OB": { definition: "L'Order Block est une zone d'accumulation institutionnelle.", url: "https://youtu.be/NYBvIcPX7XI?si=jmVr_qc31cduWcR_" },
     "FVG": { definition: "Le Fair Value Gap est un déséquilibre du prix.", url: "https://youtu.be/skk0sm6LN6M?si=momYUhKK-E1xLAuT" },
@@ -107,7 +97,16 @@ export default function SwingAnalysis() {
       </span>
     );
   };
-  
+
+// --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
+
+export default function SwingAnalysis() { 
+
+  // Ajoute ces deux lignes avec tes autres useState :
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSuiviActive, setIsSuiviActive] = useState(false);
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
+  const closeVideo = () => setPlayingVideoUrl(null);
 
   // --- ÉTATS GÉNÉRAUX & IDENTITY ---
   const [position, setPosition] = useState<"ACHAT" | "VENTE" | "NEUTRE">("NEUTRE");
