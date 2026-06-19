@@ -26,7 +26,17 @@ import {
 import Link from "next/link";
 import ReactPlayer from 'react-player';
 
-// 1. On utilise 'any' pour le dictionnaire afin de désactiver les erreurs de typage strict
+// --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
+
+export default function SwingAnalysis() { 
+
+  // Ajoute ces deux lignes avec tes autres useState :
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSuiviActive, setIsSuiviActive] = useState(false);
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
+  const closeVideo = () => setPlayingVideoUrl(null);
+
+  // 1. On utilise 'any' pour le dictionnaire afin de désactiver les erreurs de typage strict
   const glossary: any = {
     "OB": { definition: "L'Order Block est une zone d'accumulation institutionnelle.", url: "https://youtu.be/NYBvIcPX7XI?si=jmVr_qc31cduWcR_" },
     "FVG": { definition: "Le Fair Value Gap est un déséquilibre du prix.", url: "https://youtu.be/skk0sm6LN6M?si=momYUhKK-E1xLAuT" },
@@ -97,16 +107,7 @@ import ReactPlayer from 'react-player';
       </span>
     );
   };
-
-// --- AJOUTE CE BLOC ICI, JUSTE AVANT TON EXPORT ---
-
-export default function SwingAnalysis() { 
-
-  // Ajoute ces deux lignes avec tes autres useState :
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isSuiviActive, setIsSuiviActive] = useState(false);
-  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
-  const closeVideo = () => setPlayingVideoUrl(null);
+  
 
   // --- ÉTATS GÉNÉRAUX & IDENTITY ---
   const [position, setPosition] = useState<"ACHAT" | "VENTE" | "NEUTRE">("NEUTRE");
@@ -568,11 +569,11 @@ export default function SwingAnalysis() {
               <section className="relative pl-5 border-l-2 border-zinc-800 font-sans">
                 <h4 className="text-base font-black text-zinc-200 mb-4 italic uppercase">B — Analyse Macro & Contexte</h4>
                 <div className="space-y-4 text-zinc-400 text-[11px]">
-                  <div><span className="text-zinc-200 font-bold">Sentiment global (Risk-on / Risk-off) :</span> Quel est l'état d'esprit actuel des marchés pour cette paire ?<HelpTooltip title="Sentiment" content="L'appétit pour le risque dicte les flux." subVideos={[glossary.sentiment]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /><br/>→ Points de vigilance : Tendance, incertitude ou compression ? (Justifier avec indices ou flux).</div>
-                  <div><span className="text-zinc-200 font-bold">Rendements (Yields) :</span> Quelle est la dynamique des taux de référence (ex: US02Y/GB10Y) ?<HelpTooltip title="Rendements" content="Le moteur des flux Forex." subVideos={[glossary.rendements]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
-                  <div><span className="text-zinc-200 font-bold">Différentiel de taux :</span> Quelle devise semble la plus attractive au niveau monétaire (taux d’intérêt et la politique monétaire) ?<HelpTooltip title="Taux" content="Comparez les banques centrales." subVideos={[glossary.taux]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
-                  <div><span className="text-zinc-200 font-bold">Inflation & Emploi :</span> Quelles sont les dernières données clés et leur impact probable (Selon les dernières news, quelle économie est la plus forte) ?<HelpTooltip title="Inflation" content="Données macro cruciales." subVideos={[glossary.inflation]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
-                  <div><span className="text-zinc-200 font-bold">Géopolitique & Corrélations :</span> Y a-t-il des facteurs externes (Or, Indices, Pétrole) qui influencent votre actif ?<HelpTooltip title="Geopolitique" content="Tensions et impacts." subVideos={[glossary.geopolitique]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
+                  <div><span className="text-zinc-200 font-bold">Sentiment global (Risk-on / Risk-off) :</span><HelpTooltip conceptKey="Sentiment" onOpenVideo={setPlayingVideoUrl}/><br/>→ Points de vigilance : Tendance, incertitude ou compression ? (Justifier avec indices ou flux).</div>
+                  <div><span className="text-zinc-200 font-bold">Rendements (Yields) : : Quelle est la dynamique des taux de référence (ex: US02Y/GB10Y)  ?</span><HelpTooltip conceptKey="Rendements" onOpenVideo={setPlayingVideoUrl}/><br/></div>
+                  <div><span className="text-zinc-200 font-bold">Différentiel de taux : Quelle devise semble la plus attractive au niveau monétaire (taux d’intérêt et la politique monétaire) ?</span><HelpTooltip conceptKey="Taux" onOpenVideo={setPlayingVideoUrl}/><br/></div>
+                  <div><span className="text-zinc-200 font-bold">Inflation & Emploi : Quelles sont les dernières données clés et leur impact probable (Selon les dernières news, quelle économie est la plus forte) ?</span><HelpTooltip conceptKey="Inflation" onOpenVideo={setPlayingVideoUrl}/><br/></div>
+                  <div><span className="text-zinc-200 font-bold">Géopolitique & Corrélations : Y a-t-il des facteurs externes (Or, Indices, Pétrole) qui influencent votre actif ?</span><HelpTooltip conceptKey="Geopolitique" onOpenVideo={setPlayingVideoUrl}/><br/></div>
                   <div><span className="text-zinc-200 font-bold">Événements à venir :</span> Le calendrier économique présente-t-il des risques (news High Impact) ?</div>
                   <div className="italic text-zinc-500">→ Piste de synthèse macro : Identifiez une dominance claire entre les deux devises.</div>
                 </div>
@@ -582,9 +583,9 @@ export default function SwingAnalysis() {
               <section className="relative pl-5 border-l-2 border-zinc-800 font-sans">
                 <h4 className="text-base font-black text-zinc-200 mb-4 italic uppercase">D — Analyse Technique</h4>
                 <div className="space-y-4 text-zinc-400 text-[11px]">
-                  <div><span className="text-zinc-200 font-bold">Structure & Momentum :</span> Quel est l'état de la tendance sur l’unité de temps supérieure ?<HelpTooltip title="Tendance" content="Définissez votre cadre." subVideos={[glossary.tendance]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
-                  <div><span className="text-zinc-200 font-bold">Zones institutionnelles :</span> Avez-vous identifié vos points d'intérêt (FVG, OB, Support/Résistance) ?<HelpTooltip title="Zones Clés" content="Entrez à la source." subVideos={[glossary.ob, glossary.fvg]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
-                  <div><span className="text-zinc-200 font-bold">Liquidité :</span> Le marché a-t-il déjà “nettoyé” la liquidité pertinente avant votre entrée ?<HelpTooltip title="Liquidité" content="Évitez les pièges." subVideos={[glossary.liquidity]} onOpenVideo={(url) => setPlayingVideoUrl(getEmbedUrl(url))} /></div>
+                  <div><span className="text-zinc-200 font-bold">Structure & Momentum : Quel est l'état de la tendance sur l’unité de temps supérieure ?</span><HelpTooltip conceptKey="Tendance" onOpenVideo={setPlayingVideoUrl}/><br/>→ Doit être clairement définie (pas d’ambiguïté).<br/></div>
+                  <div><span className="text-zinc-200 font-bold">Zones institutionnelles : Avez-vous identifié vos points d'intérêt (FVG, OB, Support/Résistance) ?</span><HelpTooltip conceptKey="OB" onOpenVideo={setPlayingVideoUrl}/><HelpTooltip conceptKey="FVG" onOpenVideo={setPlayingVideoUrl}/><br/></div>
+                  <div><span className="text-zinc-200 font-bold">Liquidité : Le marché a-t-il déjà “nettoyé” la liquidité pertinente avant votre entrée ?</span><HelpTooltip conceptKey="Liquidity" onOpenVideo={setPlayingVideoUrl}/><br/></div>
                 </div>
               </section>
 
