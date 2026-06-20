@@ -229,6 +229,15 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
         feedback_final = f"{alerte_news}[ANALYSE IA — SWING]\n{feedback_ia}"
 
         # 4. SAUVEGARDE COMPLÈTE
+        # On sécurise la conversion des nombres pour éviter un crash si une case est vide
+        try:
+            entry_f = float(data.entry_price) if data.entry_price else 0.0
+            sl_f = float(data.stop_loss) if data.stop_loss else 0.0
+            tp_f = float(data.take_profit) if data.take_profit else 0.0
+            rr_f = float(data.calculated_rr) if data.calculated_rr else 0.0
+        except (ValueError, TypeError):
+            entry_f, sl_f, tp_f, rr_f = 0.0, 0.0, 0.0, 0.0
+
         trade_id = database.sauvegarder_trade_final(
             actif=data.actif,
             biais=data.position,
@@ -238,13 +247,13 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             feedback=feedback_final,
             statut=data.statut,
             position=data.position,
-            mode="SWING", # Forcé ici aussi
+            mode="SWING",
             t_type=data.type,
-            # Données techniques
-            entry_price=data.entry_price,
-            stop_loss=data.stop_loss,
-            take_profit=data.take_profit,
-            rr=data.calculated_rr
+            # Données sécurisées
+            entry_price=entry_f,
+            stop_loss=sl_f,
+            take_profit=tp_f,
+            rr=rr_f
         )
         
         return {
@@ -254,9 +263,14 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
         }
 
     except Exception as e:
-        logging.error(f"❌ Erreur critique route_analyse_swing : {e}")
+        import traceback
+        # Ce print va s'afficher dans ton terminal serveur (là où ton backend tourne)
+        print("--- DÉTAIL DE L'ERREUR ---")
+        print(traceback.format_exc()) 
+        print("--------------------------")
+        
         return {
-            "feedback": f"Erreur système critique : {str(e)}", 
+            "feedback": f"Erreur critique (voir logs serveur) : {str(e)}", 
             "engine_status": "ERROR"
         }
     
