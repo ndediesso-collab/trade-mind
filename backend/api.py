@@ -102,6 +102,7 @@ async def detecter_zone_geographique(request: Request) -> dict:
 
 
 # --- MODÈLES DE DONNÉES ---
+# --- MODÈLES DE DONNÉES ---
 class TradeRequest(BaseModel):
     actif: str
     analyse: str
@@ -111,10 +112,22 @@ class TradeRequest(BaseModel):
     mode: str = "Étudiant"
     type: str = "SWING"
     step: Optional[int] = None
+    
+    # Ajout de Union[float, None] et default=None pour accepter les chaînes vides ou nulles
     entry_price: Optional[float] = None
     stop_loss: Optional[float] = None
     take_profit: Optional[float] = None
     calculated_rr: Optional[float] = None
+
+    # Ajout d'un validateur pour convertir automatiquement les chaînes vides en None
+    from pydantic import field_validator
+
+    @field_validator('entry_price', 'stop_loss', 'take_profit', 'calculated_rr', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == "":
+            return None
+        return v
 
 class CalcRequest(BaseModel):
     capital: float

@@ -282,6 +282,7 @@ export default function SwingAnalysis() {
   if (statut !== "BROUILLON") return; // Empêche le changement si déjà classé
   setStatut(newStatut);
   };
+
   const handleAnalyse = async () => {
     if (!analyse || !actif) {
       setIaFeedback("> ERREUR: L'actif et le texte de l'analyse sont requis.");
@@ -298,6 +299,7 @@ export default function SwingAnalysis() {
 
     setIsLoading(true);
     setConsoleTab("ARCHITECTE");
+    
     try {
       const res = await fetch("https://trade-mind-w6rs.onrender.com/analyse/swing", {
         method: "POST",
@@ -308,57 +310,73 @@ export default function SwingAnalysis() {
           conviction, 
           position, 
           statut,  
-          step: currentStep, 
+          mode: "Étudiant", // Correction mode pour correspondre à Supabase
           type: "SWING",
-          entry_price: entryPrice,
-          stop_loss: stopLoss,
-          take_profit: takeProfit,
+          step: currentStep, 
+          // Conversion sécurisée : null si vide pour éviter l'erreur 422
+          entry_price: entryPrice === "" ? null : parseFloat(entryPrice),
+          stop_loss: stopLoss === "" ? null : parseFloat(stopLoss),
+          take_profit: takeProfit === "" ? null : parseFloat(takeProfit),
           calculated_rr: calculatedRR
         })
       });
       
       const data = await res.json();
+      
       if (res.ok) {
         setIaFeedback(data.feedback || "> ANALYSE: Traitement effectué avec succès.");
+        // Sauvegarde l'ID si le back en retourne un pour permettre l'archivage futur
+        if (data.trade_id) setCurrentTradeId(data.trade_id);
       } else {
-        setIaFeedback("> ERREUR: Le moteur d'analyse a rejeté la requête.");
+        // Affiche le détail technique renvoyé par l'API pour faciliter le débogage
+        const errorMsg = data.detail ? JSON.stringify(data.detail) : "Le moteur d'analyse a rejeté la requête.";
+        setIaFeedback(`> ERREUR: ${errorMsg}`);
       }
     } catch (e) {
       setIaFeedback("> ERREUR: Connexion au moteur d'analyse impossible.");
     } finally {
       setIsLoading(false);
     }
-  }; 
+  };
+
   const handleSave = async () => {
-  if (statut !== "BROUILLON") {
-     setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
-     return;
-  }
+    if (statut !== "BROUILLON") {
+      setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
+      return;
+    }
+
     setIaFeedback("> SYSTÈME: Injection SQL en cours....");
+
     try {
       const res = await fetch("https://trade-mind-w6rs.onrender.com/database/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          id: currentTradeId, // Passage de l'ID s'il s'agit d'un brouillon existant
+          id: currentTradeId, 
           actif, 
           analyse, 
           conviction, 
           position, 
           statut,  
+          mode: "Étudiant", // Correction mode pour correspondre à Supabase
           type: "SWING",
-          entry_price: entryPrice,
-          stop_loss: stopLoss,
-          take_profit: takeProfit,
+          // Conversion sécurisée : null si vide pour éviter l'erreur 422
+          entry_price: entryPrice === "" ? null : parseFloat(entryPrice),
+          stop_loss: stopLoss === "" ? null : parseFloat(stopLoss),
+          take_profit: takeProfit === "" ? null : parseFloat(takeProfit),
           calculated_rr: calculatedRR
         })
       });
+
       const resData = await res.json();
+      
       if (res.ok) {
         if (resData.trade_id) setCurrentTradeId(resData.trade_id);
         setIaFeedback("> SYSTÈME: Analyse archivée avec succès dans l'historique Supabase.");
       } else {
-        setIaFeedback("> ERREUR: Rejet de l'écriture par Supabase.");
+        // Affichage du message d'erreur réel renvoyé par FastAPI
+        const errorMsg = resData.detail ? JSON.stringify(resData.detail) : "Rejet de l'écriture par Supabase.";
+        setIaFeedback(`> ERREUR: ${errorMsg}`);
       }
     } catch (e) {
       setIaFeedback("> ERREUR: Connexion au pont d'archivage impossible.");
