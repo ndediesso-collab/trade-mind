@@ -48,46 +48,46 @@ export default function HistoriquePage() {
 
     const reprendreAnalyse = async (trade: any) => {
         try {
-            // 1. Récupération complète depuis le backend
+            // 1. Récupération complète depuis le backend (Supabase)
             const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${trade.id}`);
             if (!res.ok) throw new Error("Échec de récupération");
             const fullTrade = await res.json();
 
-            // 2. Nettoyage
+            // 2. Nettoyage des données pour éviter les pollutions de texte
             const texteNettoye = (fullTrade.analyse || "")
                 .replace("[PLAN AVANT-TRADE] : ", "")
                 .replace("[PLAN AVANT-SÉANCE SCALP] : ", "");
 
-            // 3. Préparation du payload de restauration COMPLET
-            // On mappe ici les champs techniques pour qu'ils soient réinjectés dans le formulaire
+            // 3. Préparation du payload de restauration
             const restorePayload = {
-                currentTradeId: fullTrade.id, // Utilisé pour le PATCH
+                trade_id: fullTrade.id,
                 actif: fullTrade.actif || "EURUSD",
-                position: fullTrade.position || "Neutre",
+                biais: fullTrade.position || "NEUTRE",
                 conviction: fullTrade.conviction || 50,
-                statut: fullTrade.statut || "BROUILLON", // Assure-toi de bien récupérer le statut réel
                 analyse: texteNettoye,
-                entryPrice: fullTrade.entry_price || "",
-                stopLoss: fullTrade.stop_loss || "",
-                takeProfit: fullTrade.take_profit || "",
-                calculatedRR: fullTrade.rr || null,
-                mode: (fullTrade.mode || "SWING").toUpperCase(),
-                feedback: fullTrade.feedback || "",
+                mode: (fullTrade.type || "SWING").toUpperCase(),
                 timestamp: Date.now()
             };
 
-            // 4. Injection dans le stockage persistant
-            // Utilisation systématique de 'tm_swing_cache_v2' pour correspondre à ton useEffect de restauration
-            const cacheKey = "tm_swing_cache_v2"; 
-            localStorage.setItem(cacheKey, JSON.stringify(restorePayload));
-
-            // Redirection
+            // 4. Injection dans le stockage persistant et redirection
             const currentType = restorePayload.mode;
-            if (currentType === "INTRADAY") router.push("/daily");
-            else if (currentType === "SCALPING") router.push("/scalp");
-            else if (currentType === "INVESTOR") router.push("/investor");
-            else router.push("/swing");
 
+            if (currentType === "INTRADAY") {
+                sessionStorage.setItem("daily_restore", JSON.stringify(restorePayload));
+                router.push("/daily");
+            } 
+            else if (currentType === "SCALPING") {
+                sessionStorage.setItem("scalp_restore", JSON.stringify(restorePayload));
+                router.push("/scalp");
+            }
+            else if (currentType === "INVESTOR") {
+                sessionStorage.setItem("investor_restore", JSON.stringify(restorePayload));
+                router.push("/investor");
+            }
+            else {
+                localStorage.setItem("tm_swing_cache", JSON.stringify(restorePayload));
+                router.push("/swing");
+            }
         } catch (e) {
             console.error("Erreur Restauration:", e);
             alert("🚨 Erreur critique : Impossible de charger les données du trade.");
@@ -212,39 +212,38 @@ export default function HistoriquePage() {
                         <div className="p-8 font-mono text-sm overflow-y-auto flex-1 bg-[radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.02),transparent)]">
                             {selectedTrade ? (
                                 <div className="space-y-8">
-                                    {/* Logic ID */}
                                     <div className="p-5 bg-black/40 rounded-[24px] border border-white/5">
                                         <p className="text-[8px] text-zinc-600 uppercase font-black mb-2 tracking-widest">Logic_ID</p>
-                                        <p className="text-blue-400 font-black text-lg">#TM-{selectedTrade.id?.toString().padStart(4, '0')}</p>
+                                        <p className="text-blue-400 font-black text-lg">#TM-{selectedTrade.id.toString().padStart(4, '0')}</p>
                                     </div>
-                                    
-                                    {/* Workspace Content : ICI C'ÉTAIT SÛREMENT LE PROBLÈME */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-blue-500/50">
                                             <Target size={14} />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Workspace_Content</span>
                                         </div>
                                         <div className="p-6 bg-black/30 rounded-[32px] border border-white/5 text-zinc-300 text-xs leading-relaxed italic border-l-4 border-l-blue-600 whitespace-pre-wrap">
-                                            {/* Utilise selectedTrade.analyse ici ! */}
-                                            {selectedTrade.analyse || "Aucune donnée textuelle."}
+                                            {selectedTrade.analyse || "> Aucune donnée textuelle."}
                                         </div>
                                     </div>
-
-                                    {/* Neural Feedback */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-green-500/50">
                                             <ShieldCheck size={14} />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Neural_Feedback</span>
                                         </div>
                                         <div className="p-6 bg-green-500/[0.02] rounded-[32px] border border-green-500/10 text-green-400/70 text-[11px] leading-relaxed whitespace-pre-wrap">
-                                            {selectedTrade.feedback || "Aucun feedback disponible."}
+                                            {selectedTrade.feedback || "> MENTOR_IA: Séquence brute sans correction."}
                                         </div>
                                     </div>
+                                    {selectedTrade.statut === 'Brouillon' && (
+                                        <button onClick={() => reprendreAnalyse(selectedTrade)} className="group/btn w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-3 active:scale-95">
+                                            <Play size={14} fill="white" /> Restaurer_Session
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center opacity-20">
-                                    <Database size={64} className="mb-6 text-zinc-600" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center text-zinc-500">Sélectionnez un audit</p>
+                                    <Database size={64} className="animate-pulse mb-6 text-zinc-600" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center text-zinc-500">Flux_Statique<br/>Saisie requise</p>
                                 </div>
                             )}
                         </div>
