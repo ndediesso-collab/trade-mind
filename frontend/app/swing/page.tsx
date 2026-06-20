@@ -54,57 +54,28 @@ export default function SwingAnalysis() {
   const videoId = url.split('/').pop()?.split('?')[0] || url.split('v=')[1]?.split('&')[0];
   return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
   };
-  const HelpTooltip = ({ 
-    title, 
-    content, 
-    subVideos, 
-    conceptKey, 
-    onOpenVideo 
-  }: { 
-    title?: string, 
-    content?: string, 
-    subVideos?: any[], 
-    conceptKey?: string, 
-    onOpenVideo: (url: string) => void 
-  }) => {
+  const HelpTooltip = ({ conceptKey, onOpenVideo }: { conceptKey: string, onOpenVideo: (url: string) => void }) => {
     const [show, setShow] = useState(false);
+    // On accède au glossaire sans typage strict pour éviter le rouge
+    const data = glossary[conceptKey];
     
-    // Sécurité : Vérifie que le glossary existe avant d'accéder à la clé
-    const data = (conceptKey && typeof glossary !== 'undefined') ? glossary[conceptKey] : null;
+    if (!data) return null;
 
     return (
-      <span 
-        className="relative inline-block ml-1" 
-        onMouseEnter={() => setShow(true)} 
-        onMouseLeave={() => setShow(false)}
-      >
+      <div className="relative inline-block ml-1" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
         <Info size={12} className="inline text-blue-500 cursor-help" />
-        
         {show && (
-          <div className="absolute z-[9999] left-0 bottom-6 w-64 bg-[#161B22] border border-blue-500/30 p-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in-95">
-            <p className="text-[10px] font-bold text-white mb-2 uppercase tracking-wider">
-              {title || (data ? conceptKey : "Information")}
-            </p>
-            <p className="text-[10px] text-zinc-300 mb-3">
-              {content || (data ? data.definition : "Définition indisponible.")}
-            </p>
-            
-            {(subVideos || (data ? [data] : [])).map((v: any, i: number) => (
-              <button 
-                key={i} 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onOpenVideo(v.url);
-                }} 
-                className="block w-full text-left text-[9px] font-black uppercase text-blue-400 hover:text-white py-1 transition-colors"
-              >
-                • {v.title || "Voir vidéo"}
-              </button>
-            ))}
+          <div className="absolute z-[100] left-0 bottom-6 w-64 bg-[#161B22] border border-blue-500/30 p-4 rounded-2xl shadow-2xl">
+            <p className="text-[10px] text-zinc-300 mb-3">{data.definition}</p>
+            <button 
+              onClick={() => onOpenVideo(data.url)} 
+              className="flex items-center gap-2 text-[9px] font-black uppercase text-blue-400 hover:text-white transition-colors"
+            >
+              <PlayCircle size={12} /> Voir vidéo
+            </button>
           </div>
         )}
-      </span>
+      </div>
     );
   };
   
