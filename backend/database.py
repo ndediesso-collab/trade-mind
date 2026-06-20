@@ -50,7 +50,7 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         "position": position,
         "mode": mode,
         "plan_synthetise": plan,
-        "\"type\"": t_type,      # Échappement pour mot réservé SQL
+        "type": t_type,      # Échappement pour mot réservé SQL
         "mode_type": t_type,
         "feedback_architect": feedback_architect,
         "logs_guardian": logs_guardian,
