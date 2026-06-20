@@ -152,61 +152,65 @@ export default function HistoriquePage() {
                             <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">Aucun flux archivé dans ce secteur</p>
                         </div>
                     ) : (
-                        filteredTrades.map((t: any) => (
-                            <div key={t.id} 
-                                   className={`group relative bg-[#161B22] border transition-all duration-300 p-6 rounded-[32px] flex justify-between items-center hover:border-zinc-500 cursor-pointer shadow-xl ${
-                                       selectedTrade?.id === t.id ? 'border-blue-500 bg-[#1c212a]' : 'border-[#30363D]'
-                                   }`}
-                                   onClick={() => setSelectedTrade(t)}>
-                                
-                                <div className="flex items-center gap-6">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${
-                                        t.position === 'LONG' || t.position === 'Achat' ? 'bg-green-500/10 text-green-500' : 
-                                        t.position === 'SHORT' || t.position === 'Vente' ? 'bg-red-500/10 text-red-500' : 'bg-zinc-800 text-zinc-500'
-                                    }`}>
-                                        {t.position === 'LONG' || t.position === 'Achat' ? <TrendingUp size={24} /> : 
-                                         t.position === 'SHORT' || t.position === 'Vente' ? <TrendingDown size={24} /> : <Minus size={24} />}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-1">
-                                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{t.date ? String(t.date).slice(0,10) : "Intraday"}</span>
-                                            <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-[8px] font-black rounded-md uppercase tracking-tighter border border-blue-500/10">
-                                                {t.type === "INTRADAY" ? "DAILY" : t.type === "SCALPING" ? "SCALP" : t.type || "SWING"}
-                                            </span>
-                                            {t.statut === 'Brouillon' && (
-                                                <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black rounded-md uppercase animate-pulse">Draft</span>
-                                            )}
+                        filteredTrades.map((t: any) => {
+                            // Normalisation du statut pour la logique d'affichage
+                            const status = String(t.statut || "BROUILLON").toUpperCase().trim();
+                            const isDraft = ["BROUILLON", "DRAFT"].includes(status);
+                            
+                            return (
+                                <div key={t.id} 
+                                    className={`group relative bg-[#161B22] border transition-all duration-300 p-6 rounded-[32px] flex justify-between items-center hover:border-zinc-500 cursor-pointer shadow-xl ${
+                                        selectedTrade?.id === t.id ? 'border-blue-500 bg-[#1c212a]' : 'border-[#30363D]'
+                                    }`}
+                                    onClick={() => setSelectedTrade(t)}>
+                                    
+                                    <div className="flex items-center gap-6">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${
+                                            t.position === 'LONG' || t.position === 'Achat' ? 'bg-green-500/10 text-green-500' : 
+                                            t.position === 'SHORT' || t.position === 'Vente' ? 'bg-red-500/10 text-red-500' : 'bg-zinc-800 text-zinc-500'
+                                        }`}>
+                                            {t.position === 'LONG' || t.position === 'Achat' ? <TrendingUp size={24} /> : 
+                                            t.position === 'SHORT' || t.position === 'Vente' ? <TrendingDown size={24} /> : <Minus size={24} />}
                                         </div>
-                                        <h3 className="text-2xl font-black tracking-tighter text-zinc-100 uppercase group-hover:text-blue-400 transition-colors font-sans">{t.actif}</h3>
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{t.date ? String(t.date).slice(0,10) : "Intraday"}</span>
+                                                <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-[8px] font-black rounded-md uppercase tracking-tighter border border-blue-500/10">
+                                                    {t.type === "INTRADAY" ? "DAILY" : t.type === "SCALPING" ? "SCALP" : t.type || "SWING"}
+                                                </span>
+                                                {isDraft && <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black rounded-md uppercase animate-pulse">Draft</span>}
+                                                {status === 'WIN' && <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black rounded-md uppercase">WIN</span>}
+                                                {status === 'LOSS' && <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[8px] font-black rounded-md uppercase">LOSS</span>}
+                                            </div>
+                                            <h3 className="text-2xl font-black tracking-tighter text-zinc-100 uppercase font-sans">{t.actif}</h3>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                        {isDraft && (
+                                            <button onClick={(e) => { e.stopPropagation(); reprendreAnalyse(t); }} className="w-11 h-11 flex items-center justify-center bg-yellow-600 text-black rounded-2xl hover:bg-yellow-500 transition-all shadow-lg active:scale-90" title="Reprendre">
+                                                <Play size={20} fill="currentColor" />
+                                            </button>
+                                        )}
+                                        <button className="w-11 h-11 flex items-center justify-center bg-blue-600 text-white rounded-2xl hover:bg-blue-500 transition-all shadow-lg active:scale-90">
+                                            <Eye size={20} />
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); deleteTrade(t.id); }} className="w-11 h-11 flex items-center justify-center bg-zinc-800 text-zinc-400 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-90">
+                                            <Trash2 size={20} />
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                    {t.statut === 'Brouillon' && (
-                                        <button onClick={(e) => { e.stopPropagation(); reprendreAnalyse(t); }} className="w-11 h-11 flex items-center justify-center bg-yellow-600 text-black rounded-2xl hover:bg-yellow-500 transition-all shadow-lg active:scale-90" title="Reprendre">
-                                            <Play size={20} fill="currentColor" />
-                                        </button>
-                                    )}
-                                    <button className="w-11 h-11 flex items-center justify-center bg-blue-600 text-white rounded-2xl hover:bg-blue-500 transition-all shadow-lg active:scale-90">
-                                        <Eye size={20} />
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); deleteTrade(t.id); }} className="w-11 h-11 flex items-center justify-center bg-zinc-800 text-zinc-400 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-90">
-                                        <Trash2 size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 
                 <div className="col-span-5">
-                    <div className="bg-[#161B22] border border-[#30363D] rounded-[40px] overflow-hidden sticky top-8 shadow-2xl h-[600px] flex flex-col animate-in fade-in zoom-in-95 duration-500">
+                    <div className="bg-[#161B22] border border-[#30363D] rounded-[40px] overflow-hidden sticky top-8 shadow-2xl h-[600px] flex flex-col">
                         <div className="bg-[#1F242C] px-8 py-5 border-b border-[#30363D] flex justify-between items-center">
                             <span className="text-[10px] font-black text-zinc-100 uppercase tracking-[0.3em]">Report_Viewer_v5</span>
                             <div className="bg-blue-600/20 px-3 py-1 rounded-full border border-blue-500/20">
-                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">
-                                    {selectedTrade?.type || "Waiting"}
-                                </span>
+                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">{selectedTrade?.type || "Waiting"}</span>
                             </div>
                         </div>
                         <div className="p-8 font-mono text-sm overflow-y-auto flex-1 bg-[radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.02),transparent)]">
@@ -218,24 +222,15 @@ export default function HistoriquePage() {
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-blue-500/50">
-                                            <Target size={14} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Workspace_Content</span>
+                                            <Target size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Workspace_Content</span>
                                         </div>
                                         <div className="p-6 bg-black/30 rounded-[32px] border border-white/5 text-zinc-300 text-xs leading-relaxed italic border-l-4 border-l-blue-600 whitespace-pre-wrap">
                                             {selectedTrade.analyse || "> Aucune donnée textuelle."}
                                         </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2 text-green-500/50">
-                                            <ShieldCheck size={14} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Neural_Feedback</span>
-                                        </div>
-                                        <div className="p-6 bg-green-500/[0.02] rounded-[32px] border border-green-500/10 text-green-400/70 text-[11px] leading-relaxed whitespace-pre-wrap">
-                                            {selectedTrade.feedback || "> MENTOR_IA: Séquence brute sans correction."}
-                                        </div>
-                                    </div>
-                                    {selectedTrade.statut === 'Brouillon' && (
-                                        <button onClick={() => reprendreAnalyse(selectedTrade)} className="group/btn w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-3 active:scale-95">
+                                    {/* Condition de restauration corrigée */}
+                                    {["BROUILLON", "DRAFT"].includes(String(selectedTrade.statut || "").toUpperCase()) && (
+                                        <button onClick={() => reprendreAnalyse(selectedTrade)} className="w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all active:scale-95">
                                             <Play size={14} fill="white" /> Restaurer_Session
                                         </button>
                                     )}
