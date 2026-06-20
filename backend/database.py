@@ -46,7 +46,7 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         "feedback": feedback,
         "statut": statut,
         "position": position,
-        "mode": mode.upper(),  # Normalisé pour Supabase
+        "mode": mode,  # Normalisé pour Supabase
         "type": t_type,
         "mode_type": t_type,
         "entry_price": float(entry_price) if entry_price is not None else None,

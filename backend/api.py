@@ -176,11 +176,8 @@ async def route_update_capital(amount: float = Query(...), token: str = Depends(
 @app.post("/analyse/swing")
 async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
     # 1. GARDE DE SÉCURITÉ : Vérification du mode "Étudiant"
-    if data.mode.capitalize() != "Étudiant":
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Route invalide : attendait 'Étudiant', reçu '{data.mode}'"
-        )
+    if data.mode.upper() not in ["SWING", "ÉTUDIANT", "ETUDIANT"]:
+        raise HTTPException(status_code=400, detail=f"Mode invalide reçu : {data.mode}")
 
     try:
         # 0. INITIALISATION CONTEXTE
@@ -253,14 +250,10 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             "trade_id": trade_id
         }
 
-    except Exception as e:
-        print(f"--- DÉTAIL DE L'ERREUR ---")
-        print(format_exc()) 
-        print("--------------------------")
-        return {
-            "feedback": f"Erreur critique : {str(e)}", 
-            "engine_status": "ERROR"
-        }
+    except Exception as ie:
+            logging.error(f"⚠️ Erreur moteur IA : {ie}")
+            # Si l'IA échoue, on continue MAIS on s'assure que feedback_ia est défini
+            feedback_ia = "Analyse indisponible."
     
 
 @app.post("/analyse/daily")
