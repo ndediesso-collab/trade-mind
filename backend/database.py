@@ -28,17 +28,10 @@ def init_db():
 def migrate_db():
     print("✅ [SYSTEM] Synchronisation réseau terminée.")
 
-def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedback, statut, position, mode, 
-                            plan="", t_type="SWING", trade_id=None, entry_price=None, stop_loss=None, 
-                            take_profit=None, rr=None, feedback_architect="", logs_guardian="", 
-                            perf_win=0, perf_loss=0, perf_be=0, market_score=50):
-    """
-    Version stabilisée : combine l'ancienne structure (qui fonctionnait) 
-    avec les nouveaux champs techniques.
-    """
+def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedback, statut, position, mode, plan="", t_type="SWING", 
+                           feedback_architect="", logs_guardian="", perf_win=0, perf_loss=0, perf_be=0, market_score=50):
+    """Insère un trade complet dans la table journal_final via une requête HTTP POST."""
     url = f"{SUPABASE_URL}/rest/v1/journal_final"
-    
-    # 1. Payload de base (ce qui fonctionnait le 14 juin)
     payload = {
         "actif": actif.upper(),
         "biais": biais,
@@ -50,7 +43,7 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         "position": position,
         "mode": mode,
         "plan_synthetise": plan,
-        "type": t_type,      # Échappement pour mot réservé SQL
+        "type": t_type,
         "mode_type": t_type,
         "feedback_architect": feedback_architect,
         "logs_guardian": logs_guardian,
@@ -59,30 +52,30 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         "performance_be": int(perf_be),
         "market_sentiment_score": int(market_score)
     }
-
-    # 2. Ajout dynamique des nouveaux champs s'ils sont fournis
-    if entry_price is not None: payload["entry_price"] = float(entry_price)
-    if stop_loss is not None: payload["stop_loss"] = float(stop_loss)
-    if take_profit is not None: payload["take_profit"] = float(take_profit)
-    if rr is not None: payload["rr"] = float(rr)
-
     try:
-        if trade_id:
-            # Mise à jour
-            patch_url = f"{url}?id=eq.{trade_id}"
-            response = httpx.patch(patch_url, headers=HEADERS, json=payload)
-            if response.status_code in [200, 204]: return trade_id
+        response = httpx.post(url, headers=HEADERS, json=payload)
+        if response.status_code in [200, 201]:
+            data = response.json()
+            trade_id = data[0]["id"]
+            
+            # Initialisation parallèle du journal d'évaluation (mind_engine_logs)
+            log_url = f"{SUPABASE_URL}/rest/v1/mind_engine_logs"
+            log_payload = {
+                "trade_id": trade_id,
+                "score_engine": int(score_ia),
+                "statut_ia": "INIT_IA",
+                "rr": 0.0,
+                "risque_reel_percent": 0.0,
+                "distance_sl_brute": 0.0,
+                "distance_tp_brute": 0.0
+            }
+            httpx.post(log_url, headers=HEADERS, json=log_payload)
+            return trade_id
         else:
-            # Insertion
-            response = httpx.post(url, headers=HEADERS, json=payload)
-            if response.status_code in [200, 201]:
-                return response.json()[0]["id"]
-        
-        # LOGS D'ERREUR DÉTAILLÉS POUR DÉBOGUER
-        print(f"❌ ERREUR SUPABASE ({response.status_code}) : {response.text}")
-        return False
+            print(f"❌ Erreur API Supabase ({response.status_code}) : {response.text}")
+            return False
     except Exception as e:
-        print(f"❌ Échec réseau : {e}")
+        print(f"❌ Échec de la requête réseau sauvegarder_trade_final : {e}")
         return False
 
 def recuperer_tout_historique():
