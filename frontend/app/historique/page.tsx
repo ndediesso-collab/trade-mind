@@ -212,38 +212,39 @@ export default function HistoriquePage() {
                         <div className="p-8 font-mono text-sm overflow-y-auto flex-1 bg-[radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.02),transparent)]">
                             {selectedTrade ? (
                                 <div className="space-y-8">
+                                    {/* Logic ID */}
                                     <div className="p-5 bg-black/40 rounded-[24px] border border-white/5">
                                         <p className="text-[8px] text-zinc-600 uppercase font-black mb-2 tracking-widest">Logic_ID</p>
-                                        <p className="text-blue-400 font-black text-lg">#TM-{selectedTrade.id.toString().padStart(4, '0')}</p>
+                                        <p className="text-blue-400 font-black text-lg">#TM-{selectedTrade.id?.toString().padStart(4, '0')}</p>
                                     </div>
+                                    
+                                    {/* Workspace Content : ICI C'ÉTAIT SÛREMENT LE PROBLÈME */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-blue-500/50">
                                             <Target size={14} />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Workspace_Content</span>
                                         </div>
                                         <div className="p-6 bg-black/30 rounded-[32px] border border-white/5 text-zinc-300 text-xs leading-relaxed italic border-l-4 border-l-blue-600 whitespace-pre-wrap">
-                                            {selectedTrade.analyse || "> Aucune donnée textuelle."}
+                                            {/* Utilise selectedTrade.analyse ici ! */}
+                                            {selectedTrade.analyse || "Aucune donnée textuelle."}
                                         </div>
                                     </div>
+
+                                    {/* Neural Feedback */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-green-500/50">
                                             <ShieldCheck size={14} />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Neural_Feedback</span>
                                         </div>
                                         <div className="p-6 bg-green-500/[0.02] rounded-[32px] border border-green-500/10 text-green-400/70 text-[11px] leading-relaxed whitespace-pre-wrap">
-                                            {selectedTrade.feedback || "> MENTOR_IA: Séquence brute sans correction."}
+                                            {selectedTrade.feedback || "Aucun feedback disponible."}
                                         </div>
                                     </div>
-                                    {selectedTrade.statut === 'Brouillon' && (
-                                        <button onClick={() => reprendreAnalyse(selectedTrade)} className="group/btn w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-3 active:scale-95">
-                                            <Play size={14} fill="white" /> Restaurer_Session
-                                        </button>
-                                    )}
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center opacity-20">
-                                    <Database size={64} className="animate-pulse mb-6 text-zinc-600" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center text-zinc-500">Flux_Statique<br/>Saisie requise</p>
+                                    <Database size={64} className="mb-6 text-zinc-600" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-center text-zinc-500">Sélectionnez un audit</p>
                                 </div>
                             )}
                         </div>
