@@ -48,46 +48,46 @@ export default function HistoriquePage() {
 
     const reprendreAnalyse = async (trade: any) => {
         try {
-            // 1. Récupération complète depuis le backend (Supabase)
+            // 1. Récupération complète depuis le backend
             const res = await fetch(`https://trade-mind-w6rs.onrender.com/historique/get/${trade.id}`);
             if (!res.ok) throw new Error("Échec de récupération");
             const fullTrade = await res.json();
 
-            // 2. Nettoyage des données pour éviter les pollutions de texte
+            // 2. Nettoyage
             const texteNettoye = (fullTrade.analyse || "")
                 .replace("[PLAN AVANT-TRADE] : ", "")
                 .replace("[PLAN AVANT-SÉANCE SCALP] : ", "");
 
-            // 3. Préparation du payload de restauration
+            // 3. Préparation du payload de restauration COMPLET
+            // On mappe ici les champs techniques pour qu'ils soient réinjectés dans le formulaire
             const restorePayload = {
-                trade_id: fullTrade.id,
+                currentTradeId: fullTrade.id, // Utilisé pour le PATCH
                 actif: fullTrade.actif || "EURUSD",
-                biais: fullTrade.position || "NEUTRE",
+                position: fullTrade.position || "Neutre",
                 conviction: fullTrade.conviction || 50,
+                statut: fullTrade.statut || "BROUILLON", // Assure-toi de bien récupérer le statut réel
                 analyse: texteNettoye,
-                mode: (fullTrade.type || "SWING").toUpperCase(),
+                entryPrice: fullTrade.entry_price || "",
+                stopLoss: fullTrade.stop_loss || "",
+                takeProfit: fullTrade.take_profit || "",
+                calculatedRR: fullTrade.rr || null,
+                mode: (fullTrade.mode || "SWING").toUpperCase(),
+                feedback: fullTrade.feedback || "",
                 timestamp: Date.now()
             };
 
-            // 4. Injection dans le stockage persistant et redirection
-            const currentType = restorePayload.mode;
+            // 4. Injection dans le stockage persistant
+            // Utilisation systématique de 'tm_swing_cache_v2' pour correspondre à ton useEffect de restauration
+            const cacheKey = "tm_swing_cache_v2"; 
+            localStorage.setItem(cacheKey, JSON.stringify(restorePayload));
 
-            if (currentType === "INTRADAY") {
-                sessionStorage.setItem("daily_restore", JSON.stringify(restorePayload));
-                router.push("/daily");
-            } 
-            else if (currentType === "SCALPING") {
-                sessionStorage.setItem("scalp_restore", JSON.stringify(restorePayload));
-                router.push("/scalp");
-            }
-            else if (currentType === "INVESTOR") {
-                sessionStorage.setItem("investor_restore", JSON.stringify(restorePayload));
-                router.push("/investor");
-            }
-            else {
-                localStorage.setItem("tm_swing_cache", JSON.stringify(restorePayload));
-                router.push("/swing");
-            }
+            // Redirection
+            const currentType = restorePayload.mode;
+            if (currentType === "INTRADAY") router.push("/daily");
+            else if (currentType === "SCALPING") router.push("/scalp");
+            else if (currentType === "INVESTOR") router.push("/investor");
+            else router.push("/swing");
+
         } catch (e) {
             console.error("Erreur Restauration:", e);
             alert("🚨 Erreur critique : Impossible de charger les données du trade.");

@@ -338,7 +338,7 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
         current_metrics = dashboard_engine.get_full_metrics()
         is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        # 1. TENTATIVE IA
+        # 1. TENTATIVE IA (Approche généralisée)
         ia_success = False
         feedback_ia = "Analyse IA temporairement indisponible."
         try:
@@ -365,12 +365,14 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
         except Exception as e:
             logging.error(f"⚠️ Erreur récupération news : {e}")
 
-        # 3. SAUVEGARDE COMPLÈTE (Correction de l'ID et du mode)
-        # On extrait l'ID depuis le modèle 'data' (qui contient 'id' selon ton TradeRequest)
-        trade_id_to_save = getattr(data, 'id', None) 
-        
+        # 3. SAUVEGARDE COMPLÈTE
+        # Conversion sécurisée des nombres (si vide, envoie None pour Supabase)
+        def to_float(val):
+            try: return float(val) if val is not None and val != "" else None
+            except: return None
+
         trade_id = database.sauvegarder_trade_final(
-            trade_id=trade_id_to_save, # <-- AJOUT CRITIQUE : Permet le PATCH/UPDATE
+            trade_id=getattr(data, 'id', None), # Passage explicite de l'ID pour le PATCH
             actif=data.actif,
             biais=data.position,
             conviction=data.conviction,
@@ -379,17 +381,16 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
             feedback=feedback_ia,
             statut=data.statut,
             position=data.position,
-            mode=data.mode,             # <-- SUPPRESSION DU .upper() pour respecter "Étudiant"
+            mode=data.mode, # Gardé tel quel (ex: "Étudiant") pour correspondre à Supabase
             t_type=data.type,
-            entry_price=float(data.entry_price) if data.entry_price else None,
-            stop_loss=float(data.stop_loss) if data.stop_loss else None,
-            take_profit=float(data.take_profit) if data.take_profit else None,
-            rr=float(data.calculated_rr) if data.calculated_rr else None
+            entry_price=to_float(data.entry_price),
+            stop_loss=to_float(data.stop_loss),
+            take_profit=to_float(data.take_profit),
+            rr=to_float(data.calculated_rr)
         )
         
-        # Vérification si la sauvegarde a échoué silencieusement
         if trade_id is False:
-            raise Exception("La fonction database.sauvegarder_trade_final a retourné False (Rejet Supabase).")
+            raise Exception("La base de données a retourné une erreur lors de l'écriture.")
         
         return {
             "status": "success", 
@@ -401,8 +402,8 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
 
     except Exception as e:
         logging.error(f"❌ Erreur critique route_sauvegarde_generique : {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde : {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/analyse/guardian")
 async def route_guardian_live_chat(data: GuardianRequest, token: str = Depends(verifier_session_terminal)):
     try:
