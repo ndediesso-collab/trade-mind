@@ -338,10 +338,9 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
         current_metrics = dashboard_engine.get_full_metrics()
         is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        # 1. TENTATIVE IA (Approche généralisée)
+        # 1. TENTATIVE IA
         ia_success = False
-        feedback_ia = "Analyse IA temporairement indisponible." # Valeur par défaut robuste
-
+        feedback_ia = "Analyse IA temporairement indisponible."
         try:
             resultat = mentor_ia.lancer_analyse_api(
                 data.analyse, 
@@ -349,7 +348,6 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
                 data.actif, 
                 {"ia_severite": "Strict" if is_locked else "Neutre", "mode": data.mode}
             )
-            # On vérifie si on a bien un verdict
             verdict = resultat.get("verdict")
             if verdict:
                 feedback_ia = verdict
@@ -363,29 +361,35 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
             bridge = BridgeNewsInterface(guard_instance=shared_guard)
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
-                # On concatène proprement avec le feedback existant
                 feedback_ia = f"{alerte}\n\n[AUDIT IA]\n{feedback_ia}"
         except Exception as e:
             logging.error(f"⚠️ Erreur récupération news : {e}")
 
-        # 3. SAUVEGARDE COMPLÈTE
-        # L'attribut 'feedback' est ici correctement mappé vers Supabase
+        # 3. SAUVEGARDE COMPLÈTE (Correction de l'ID et du mode)
+        # On extrait l'ID depuis le modèle 'data' (qui contient 'id' selon ton TradeRequest)
+        trade_id_to_save = getattr(data, 'id', None) 
+        
         trade_id = database.sauvegarder_trade_final(
+            trade_id=trade_id_to_save, # <-- AJOUT CRITIQUE : Permet le PATCH/UPDATE
             actif=data.actif,
             biais=data.position,
             conviction=data.conviction,
             score_ia=0,
             analyse=data.analyse,
-            feedback=feedback_ia, # Correspond à l'attribut 'feedback' de Supabase
+            feedback=feedback_ia,
             statut=data.statut,
             position=data.position,
-            mode=data.mode.upper(),
+            mode=data.mode,             # <-- SUPPRESSION DU .upper() pour respecter "Étudiant"
             t_type=data.type,
-            entry_price=data.entry_price,
-            stop_loss=data.stop_loss,
-            take_profit=data.take_profit,
-            rr=data.calculated_rr
+            entry_price=float(data.entry_price) if data.entry_price else None,
+            stop_loss=float(data.stop_loss) if data.stop_loss else None,
+            take_profit=float(data.take_profit) if data.take_profit else None,
+            rr=float(data.calculated_rr) if data.calculated_rr else None
         )
+        
+        # Vérification si la sauvegarde a échoué silencieusement
+        if trade_id is False:
+            raise Exception("La fonction database.sauvegarder_trade_final a retourné False (Rejet Supabase).")
         
         return {
             "status": "success", 
@@ -398,7 +402,7 @@ async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(ve
     except Exception as e:
         logging.error(f"❌ Erreur critique route_sauvegarde_generique : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde : {str(e)}")
-
+    
 @app.post("/analyse/guardian")
 async def route_guardian_live_chat(data: GuardianRequest, token: str = Depends(verifier_session_terminal)):
     try:
