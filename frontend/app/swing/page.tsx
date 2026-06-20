@@ -340,11 +340,7 @@ export default function SwingAnalysis() {
   };
 
   const handleSave = async () => {
-    if (statut !== "BROUILLON") {
-      setIaFeedback("> SYSTÈME: Analyse verrouillée. Impossible de modifier un trade classé WIN/LOSS.");
-      return;
-    }
-
+   
     setIaFeedback("> SYSTÈME: Injection SQL en cours....");
 
     try {
