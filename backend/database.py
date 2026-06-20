@@ -86,16 +86,22 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         return False
 
 def recuperer_tout_historique():
-    """Récupère l'historique complet sans se soucier de l'ordre des colonnes."""
-    # On sélectionne toutes les colonnes dynamiquement
-    url = f"{SUPABASE_URL}/rest/v1/journal_final?select=*&order=date.desc"
+    """Récupère l'historique sans forcer le tri sur le mot réservé si conflit."""
+    url = f"{SUPABASE_URL}/rest/v1/journal_final?select=id,date,actif,statut,analyse,position,conviction,mode,feedback,%22type%22"
     try:
         response = httpx.get(url, headers=HEADERS)
         if response.status_code == 200:
-            return response.json() # On renvoie la liste de dicts directement
+            res = response.json()
+            res.sort(key=lambda x: x.get("date") or "", reverse=True)
+            return [
+                (t["id"], t.get("date"), t.get("actif"), t.get("statut"), t.get("analyse"),
+                 t.get("position"), t.get("conviction"), t.get("mode"), t.get("feedback"), t.get("type"))
+                for t in res
+            ]
+        print(f"⚠️ Erreur Historique API ({response.status_code}) : {response.text}")
         return []
     except Exception as e:
-        print(f"❌ Échec réseau : {e}")
+        print(f"❌ Échec recuperer_tout_historique : {e}")
         return []
 
 def get_recent_flux(limit=10):
