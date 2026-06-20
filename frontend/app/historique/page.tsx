@@ -169,26 +169,14 @@ export default function HistoriquePage() {
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-3 mb-1">
-                                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">
-                                                    {t.date ? String(t.date).slice(0, 10) : "Intraday"}
-                                                </span>
-                                                
-                                                {/* Badge Type */}
-                                                <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-[8px] font-black rounded-md uppercase tracking-tighter border border-blue-500/10">
-                                                    {t.type === "INTRADAY" ? "DAILY" : t.type === "SCALPING" ? "SCALP" : t.type || "SWING"}
-                                                </span>
-
-                                                {/* Badge Statut : Gestion robuste de la casse */}
-                                                {['BROUILLON', 'BROUILLON', 'DRAFT'].includes(String(t.statut).toUpperCase()) && (
-                                                    <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black rounded-md uppercase animate-pulse">Draft</span>
-                                                )}
-                                                {String(t.statut).toUpperCase() === 'WIN' && (
-                                                    <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black rounded-md uppercase">WIN</span>
-                                                )}
-                                                {String(t.statut).toUpperCase() === 'LOSS' && (
-                                                    <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[8px] font-black rounded-md uppercase">LOSS</span>
-                                                )}
-                                            </div>
+                                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{t.date ? String(t.date).slice(0,10) : "Intraday"}</span>
+                                            <span className="px-2 py-0.5 bg-blue-900/30 text-blue-400 text-[8px] font-black rounded-md uppercase tracking-tighter border border-blue-500/10">
+                                                {t.type === "INTRADAY" ? "DAILY" : t.type === "SCALPING" ? "SCALP" : t.type || "SWING"}
+                                            </span>
+                                            {t.statut === 'Brouillon' && (
+                                                <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-500 text-[8px] font-black rounded-md uppercase animate-pulse">Draft</span>
+                                            )}
+                                        </div>
                                         <h3 className="text-2xl font-black tracking-tighter text-zinc-100 uppercase group-hover:text-blue-400 transition-colors font-sans">{t.actif}</h3>
                                     </div>
                                 </div>
@@ -246,13 +234,9 @@ export default function HistoriquePage() {
                                             {selectedTrade.feedback || "> MENTOR_IA: Séquence brute sans correction."}
                                         </div>
                                     </div>
-                                    {['BROUILLON', 'DRAFT'].includes(String(selectedTrade.statut).toUpperCase()) && (
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); reprendreAnalyse(selectedTrade.statut); }} 
-                                            className="w-11 h-11 flex items-center justify-center bg-yellow-600 text-black rounded-2xl hover:bg-yellow-500 transition-all shadow-lg active:scale-90" 
-                                            title="Reprendre"
-                                        >
-                                            <Play size={20} fill="currentColor" />
+                                    {selectedTrade.statut === 'Brouillon' && (
+                                        <button onClick={() => reprendreAnalyse(selectedTrade)} className="group/btn w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-3 active:scale-95">
+                                            <Play size={14} fill="white" /> Restaurer_Session
                                         </button>
                                     )}
                                 </div>
