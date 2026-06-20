@@ -13,6 +13,7 @@ import database
 import mentor_ia 
 import tools_stats 
 from mentor_ia import MarketGuard
+import traceback
 
 
 
@@ -221,9 +222,16 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
                 "SWING"          # Forcé ici
             )
             feedback_ia = verdict
-        except Exception as ie:
-            logging.error(f"⚠️ Erreur moteur IA (Swing) : {ie}")
-            feedback_ia = f"Erreur de génération : {str(ie)}"
+        except Exception as e:
+            # Ce print va s'afficher dans ton terminal serveur (là où ton backend tourne)
+            print("--- DÉTAIL DE L'ERREUR ---")
+            print(traceback.format_exc()) 
+            print("--------------------------")
+        
+        return {
+            "feedback": f"Erreur critique (voir logs serveur) : {str(e)}", 
+            "engine_status": "ERROR"
+        }
 
         # 3. FUSION PROPRE
         feedback_final = f"{alerte_news}[ANALYSE IA — SWING]\n{feedback_ia}"
@@ -263,14 +271,9 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
         }
 
     except Exception as e:
-        import traceback
-        # Ce print va s'afficher dans ton terminal serveur (là où ton backend tourne)
-        print("--- DÉTAIL DE L'ERREUR ---")
-        print(traceback.format_exc()) 
-        print("--------------------------")
-        
+        logging.error(f"❌ Erreur critique route_analyse_swing : {e}")
         return {
-            "feedback": f"Erreur critique (voir logs serveur) : {str(e)}", 
+            "feedback": f"Erreur système critique : {str(e)}", 
             "engine_status": "ERROR"
         }
     
