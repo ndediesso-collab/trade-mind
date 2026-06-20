@@ -13,7 +13,8 @@ import database
 import mentor_ia 
 import tools_stats 
 from mentor_ia import MarketGuard
-import traceback
+
+from traceback import format_exc # Ajoute ceci en haut de ton fichier
 
 
 
@@ -171,13 +172,14 @@ async def route_update_capital(amount: float = Query(...), token: str = Depends(
 
 # --- ROUTES ANALYSE & TOOLS ---
 
+
 @app.post("/analyse/swing")
 async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
-    # 1. GARDE DE SÉCURITÉ : On bloque tout ce qui n'est pas SWING
-    if data.mode.upper() != "SWING":
+    # 1. GARDE DE SÉCURITÉ : Vérification du mode "Étudiant"
+    if data.mode.capitalize() != "Étudiant":
         raise HTTPException(
             status_code=400, 
-            detail="Route invalide : cette route est exclusivement réservée au mode SWING."
+            detail=f"Route invalide : attendait 'Étudiant', reçu '{data.mode}'"
         )
 
     try:
@@ -185,21 +187,19 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
         current_metrics = dashboard_engine.get_full_metrics()
         is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        # 1. RÉCUPÉRATION DES NEWS (Spécifique Swing)
+        # 1. RÉCUPÉRATION DES NEWS
         alerte_news = ""
         try:
             shared_guard = MarketGuard()
             bridge = BridgeNewsInterface(guard_instance=shared_guard)
-            # On force le mode SWING ici pour la cohérence
             alerte = bridge.get_live_alerts(data.actif, "SWING")
             if alerte:
                 alerte_news = f"{alerte}\n\n"
         except Exception as e:
             logging.error(f"⚠️ Erreur news (Swing) : {e}")
 
-        # 2. TENTATIVE IA (Architecture unifiée pour Swing)
+        # 2. TENTATIVE IA
         feedback_ia = "Analyse IA temporairement indisponible."
-        
         try:
             class AppMock:
                 def __init__(self, settings):
@@ -209,35 +209,19 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             
             app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
 
-            # Le moteur mentor_ia reçoit explicitement le mode SWING
             score, verdict, couleur = mentor_ia.analyser_ia_pro(
-                app_mock, 
-                "",              # Ancienne analyse
-                data.analyse,    # Nouvelle analyse
-                data.statut,     # Statut actuel
-                data.actif, 
-                data.conviction, 
-                "",              # Guide étudiant
-                "",              # Guide expert
-                "SWING"          # Forcé ici
+                app_mock, "", data.analyse, data.statut, data.actif, 
+                data.conviction, "", "", "SWING"
             )
             feedback_ia = verdict
-        except Exception as e:
-            # Ce print va s'afficher dans ton terminal serveur (là où ton backend tourne)
-            print("--- DÉTAIL DE L'ERREUR ---")
-            print(traceback.format_exc()) 
-            print("--------------------------")
-        
-        return {
-            "feedback": f"Erreur critique (voir logs serveur) : {str(e)}", 
-            "engine_status": "ERROR"
-        }
+        except Exception as ie:
+            logging.error(f"⚠️ Erreur moteur IA : {ie}")
+            feedback_ia = f"Erreur de génération : {str(ie)}"
 
-        # 3. FUSION PROPRE
+        # 3. FUSION DU FEEDBACK
         feedback_final = f"{alerte_news}[ANALYSE IA — SWING]\n{feedback_ia}"
 
         # 4. SAUVEGARDE COMPLÈTE
-        # On sécurise la conversion des nombres pour éviter un crash si une case est vide
         try:
             entry_f = float(data.entry_price) if data.entry_price else 0.0
             sl_f = float(data.stop_loss) if data.stop_loss else 0.0
@@ -255,9 +239,8 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             feedback=feedback_final,
             statut=data.statut,
             position=data.position,
-            mode="SWING",
+            mode="Étudiant", # Mode réel attendu par Supabase
             t_type=data.type,
-            # Données sécurisées
             entry_price=entry_f,
             stop_loss=sl_f,
             take_profit=tp_f,
@@ -271,9 +254,11 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
         }
 
     except Exception as e:
-        logging.error(f"❌ Erreur critique route_analyse_swing : {e}")
+        print(f"--- DÉTAIL DE L'ERREUR ---")
+        print(format_exc()) 
+        print("--------------------------")
         return {
-            "feedback": f"Erreur système critique : {str(e)}", 
+            "feedback": f"Erreur critique : {str(e)}", 
             "engine_status": "ERROR"
         }
     
