@@ -428,26 +428,22 @@ async def route_calcul(data: CalcRequest, token: str = Depends(verifier_session_
 @app.get("/historique/all")
 async def get_historique(token: str = Depends(verifier_session_terminal)):
     try:
-        # Assure-toi que recuperer_tout_historique() renvoie des objets 
-        # (ex: via .dict() ou une lecture par clé) et non une simple liste.
-        # Si c'est une liste, on le transforme ici pour être sûr.
         trades = database.recuperer_tout_historique()
-        
         format_trades = []
         for t in trades:
-            # Si 't' est un objet avec des propriétés, utilise t.statut au lieu de t[3]
-            # Si 't' est toujours un tuple, garde tes indices mais vérifie-les !
             format_trades.append({
                 "id": t[0],
                 "date": str(t[1])[:16] if t[1] else "N/A",
                 "actif": str(t[2]).upper() if t[2] else "UNITÉ",
-                "statut": str(t[3]).upper() if t[3] else "BROUILLON", # Force en majuscules
-                "analyse": t[4] if t[4] else "",
-                "position": t[5] if t[5] else "NEUTRE",
-                "conviction": t[6] if t[6] else 50,
-                "mode": t[7] if t[7] else "ÉTUDIANT",
-                "feedback": t[8] if t[8] else "",
-                "type": t[9] if len(t) > 9 else "SWING"
+                "biais": t[3] if len(t) > 3 else "NEUTRE",      # Colonne 3
+                "conviction": t[4] if len(t) > 4 else 50,       # Colonne 4
+                "score_ia": t[5] if len(t) > 5 else 0,          # Colonne 5
+                "analyse": t[6] if len(t) > 6 else "",          # Colonne 6
+                "resultat": t[7] if len(t) > 7 else "",         # Colonne 7
+                "statut": str(t[8]).upper() if len(t) > 8 else "BROUILLON", # Colonne 8
+                "position": t[9] if len(t) > 9 else "NEUTRE",   # Colonne 9
+                "mode": t[10] if len(t) > 10 else "ÉTUDIANT",   # Colonne 10
+                "type": t[11] if len(t) > 11 else "SWING"       # Colonne 11
             })
         return {"trades": format_trades}
     except Exception as e:
@@ -457,11 +453,28 @@ async def get_historique(token: str = Depends(verifier_session_terminal)):
 @app.get("/historique/get/{trade_id}")
 async def get_trade_details(trade_id: int, token: str = Depends(verifier_session_terminal)):
     try:
-        trade = database.recuperer_trade_par_id(trade_id)
-        if not trade:
+        t = database.recuperer_trade_par_id(trade_id)
+        if not t:
             raise HTTPException(status_code=404, detail="Analyse introuvable")
-        return trade
+            
+        # Mapping explicite pour garantir la structure au frontend
+        trade_dict = {
+            "id": t[0],
+            "date": str(t[1])[:16] if t[1] else "N/A",
+            "actif": t[2],
+            "biais": t[3],
+            "conviction": t[4],
+            "score_ia": t[5],
+            "analyse": t[6],
+            "resultat": t[7],
+            "statut": t[8],
+            "position": t[9],
+            "mode": t[10],
+            "type": t[11]
+        }
+        return trade_dict
     except Exception as e:
+        logging.error(f"Erreur détails trade {trade_id} : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/historique/delete/{trade_id}")
