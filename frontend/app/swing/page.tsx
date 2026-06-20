@@ -49,10 +49,20 @@ export default function SwingAnalysis() {
     "Tendance": { definition: "Direction générale des prix (sommets/creux).", url: "https://youtu.be/7_oLrv-TIAA?si=kjzxL8l2RhlMXf_c" }
   };
   const getEmbedUrl = (url: string) => {
-  if (!url) return "";
-  // Extrait l'ID de la vidéo
-  const videoId = url.split('/').pop()?.split('?')[0] || url.split('v=')[1]?.split('&')[0];
-  return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    if (!url) return "";
+
+    // 1. Essayer de récupérer l'ID après "v=" (liens classiques)
+    // 2. Essayer de récupérer l'ID après le dernier "/" (liens courts youtu.be)
+    let videoId = "";
+    
+    if (url.includes("v=")) {
+      videoId = url.split("v=")[1].split("&")[0];
+    } else if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1].split("?")[0];
+    }
+
+    // Retourne l'URL formatée pour l'embed si un ID a été trouvé
+    return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1` : url;
   };
   const HelpTooltip = ({ conceptKey, onOpenVideo }: { conceptKey: string, onOpenVideo: (url: string) => void }) => {
     const [show, setShow] = useState(false);
@@ -751,12 +761,13 @@ export default function SwingAnalysis() {
               </button>
               
               <iframe
-                className="w-full h-full rounded-[24px]"
-                src={playingVideoUrl}
-                title="Vidéo YouTube"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+                  className="w-full h-full rounded-[24px]"
+                  // Utilise la fonction de transformation ici :
+                  src={getEmbedUrl(playingVideoUrl || "")}
+                  title="Vidéo YouTube"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
             </div>
           </div>
         )}
