@@ -744,13 +744,22 @@ export default function SwingAnalysis() {
         </section>
 
         {playingVideoUrl && (
-        <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 lg:p-12 backdrop-blur-xl" onClick={closeVideo}>
-          <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-5xl aspect-video rounded-[32px] shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closeVideo} className="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-all"><X size={24} /></button>
-            <iframe className="w-full h-full rounded-[24px]" src={playingVideoUrl} title="Vidéo" allowFullScreen />
+          <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 lg:p-12 backdrop-blur-xl" onClick={closeVideo}>
+            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-5xl aspect-video rounded-[32px] shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
+              <button onClick={closeVideo} className="absolute -top-12 right-0 text-zinc-500 hover:text-white transition-all">
+                <X size={24} />
+              </button>
+              
+              <iframe
+                className="w-full h-full rounded-[24px]"
+                src={playingVideoUrl}
+                title="Vidéo YouTube"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </AuroraBackground>
   );
