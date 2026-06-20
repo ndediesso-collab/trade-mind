@@ -29,14 +29,16 @@ def migrate_db():
     print("✅ [SYSTEM] Synchronisation réseau terminée.")
 
 def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedback, statut, position, mode, 
-                            t_type="SWING", trade_id=None, entry_price=None, stop_loss=None, take_profit=None, rr=None):
+                            plan="", t_type="SWING", trade_id=None, entry_price=None, stop_loss=None, 
+                            take_profit=None, rr=None, feedback_architect="", logs_guardian="", 
+                            perf_win=0, perf_loss=0, perf_be=0, market_score=50):
     """
-    Insère ou met à jour un trade complet dans journal_final via l'API REST.
-    Fonctionne pour tous les modes : SWING, DAILY, SCALP.
+    Version stabilisée : combine l'ancienne structure (qui fonctionnait) 
+    avec les nouveaux champs techniques.
     """
     url = f"{SUPABASE_URL}/rest/v1/journal_final"
     
-    # Payload unifié pour tous les modes
+    # 1. Payload de base (ce qui fonctionnait le 14 juin)
     payload = {
         "actif": actif.upper(),
         "biais": biais,
@@ -46,42 +48,41 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         "feedback": feedback,
         "statut": statut,
         "position": position,
-        "mode": mode,  # Normalisé pour Supabase
-        "type": t_type,
+        "mode": mode,
+        "plan_synthetise": plan,
+        "\"type\"": t_type,      # Échappement pour mot réservé SQL
         "mode_type": t_type,
-        "entry_price": float(entry_price) if entry_price is not None else None,
-        "stop_loss": float(stop_loss) if stop_loss is not None else None,
-        "take_profit": float(take_profit) if take_profit is not None else None,
-        "rr": float(rr) if rr is not None else None
+        "feedback_architect": feedback_architect,
+        "logs_guardian": logs_guardian,
+        "performance_win": int(perf_win),
+        "performance_loss": int(perf_loss),
+        "performance_be": int(perf_be),
+        "market_sentiment_score": int(market_score)
     }
+
+    # 2. Ajout dynamique des nouveaux champs s'ils sont fournis
+    if entry_price is not None: payload["entry_price"] = float(entry_price)
+    if stop_loss is not None: payload["stop_loss"] = float(stop_loss)
+    if take_profit is not None: payload["take_profit"] = float(take_profit)
+    if rr is not None: payload["rr"] = float(rr)
 
     try:
         if trade_id:
-            # MISE À JOUR : PATCH si un ID existe (pour finaliser un brouillon)
+            # Mise à jour
             patch_url = f"{url}?id=eq.{trade_id}"
             response = httpx.patch(patch_url, headers=HEADERS, json=payload)
-            if response.status_code in [200, 204]:
-                return trade_id
-            print(f"❌ Erreur PATCH Supabase ({response.status_code}) : {response.text}")
-            return False
+            if response.status_code in [200, 204]: return trade_id
         else:
-            # INSERTION : POST pour un nouveau trade
+            # Insertion
             response = httpx.post(url, headers=HEADERS, json=payload)
             if response.status_code in [200, 201]:
-                data = response.json()
-                new_id = data[0]["id"]
-                
-                # Initialisation parallèle des logs
-                log_url = f"{SUPABASE_URL}/rest/v1/mind_engine_logs"
-                log_payload = {"trade_id": new_id, "score_engine": int(score_ia), "statut_ia": "INIT_IA"}
-                httpx.post(log_url, headers=HEADERS, json=log_payload)
-                return new_id
-            
-            print(f"❌ Erreur POST Supabase ({response.status_code}) : {response.text}")
-            return False
-            
+                return response.json()[0]["id"]
+        
+        # LOGS D'ERREUR DÉTAILLÉS POUR DÉBOGUER
+        print(f"❌ ERREUR SUPABASE ({response.status_code}) : {response.text}")
+        return False
     except Exception as e:
-        print(f"❌ Échec réseau sauvegarder_trade_final : {e}")
+        print(f"❌ Échec réseau : {e}")
         return False
 
 def recuperer_tout_historique():
