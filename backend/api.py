@@ -428,23 +428,30 @@ async def route_calcul(data: CalcRequest, token: str = Depends(verifier_session_
 @app.get("/historique/all")
 async def get_historique(token: str = Depends(verifier_session_terminal)):
     try:
+        # Assure-toi que recuperer_tout_historique() renvoie des objets 
+        # (ex: via .dict() ou une lecture par clé) et non une simple liste.
+        # Si c'est une liste, on le transforme ici pour être sûr.
         trades = database.recuperer_tout_historique()
+        
         format_trades = []
         for t in trades:
+            # Si 't' est un objet avec des propriétés, utilise t.statut au lieu de t[3]
+            # Si 't' est toujours un tuple, garde tes indices mais vérifie-les !
             format_trades.append({
                 "id": t[0],
                 "date": str(t[1])[:16] if t[1] else "N/A",
                 "actif": str(t[2]).upper() if t[2] else "UNITÉ",
-                "statut": t[3] if t[3] else "Brouillon",
+                "statut": str(t[3]).upper() if t[3] else "BROUILLON", # Force en majuscules
                 "analyse": t[4] if t[4] else "",
-                "position": t[5] if t[5] else "Neutre",
+                "position": t[5] if t[5] else "NEUTRE",
                 "conviction": t[6] if t[6] else 50,
-                "mode": t[7] if t[7] else "Étudiant",
+                "mode": t[7] if t[7] else "ÉTUDIANT",
                 "feedback": t[8] if t[8] else "",
                 "type": t[9] if len(t) > 9 else "SWING"
             })
         return {"trades": format_trades}
     except Exception as e:
+        logging.error(f"Erreur historique : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/historique/get/{trade_id}")
