@@ -216,21 +216,40 @@ export default function HistoriquePage() {
                         <div className="p-8 font-mono text-sm overflow-y-auto flex-1 bg-[radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.02),transparent)]">
                             {selectedTrade ? (
                                 <div className="space-y-8">
+                                    {/* Logic ID */}
                                     <div className="p-5 bg-black/40 rounded-[24px] border border-white/5">
                                         <p className="text-[8px] text-zinc-600 uppercase font-black mb-2 tracking-widest">Logic_ID</p>
                                         <p className="text-blue-400 font-black text-lg">#TM-{selectedTrade.id.toString().padStart(4, '0')}</p>
                                     </div>
+                                    
+                                    {/* Workspace Content */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 text-blue-500/50">
-                                            <Target size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Workspace_Content</span>
+                                            <Target size={14} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Workspace_Content</span>
                                         </div>
                                         <div className="p-6 bg-black/30 rounded-[32px] border border-white/5 text-zinc-300 text-xs leading-relaxed italic border-l-4 border-l-blue-600 whitespace-pre-wrap">
                                             {selectedTrade.analyse || "> Aucune donnée textuelle."}
                                         </div>
                                     </div>
-                                    {/* Condition de restauration corrigée */}
-                                    {["BROUILLON", "DRAFT"].includes(String(selectedTrade.statut || "").toUpperCase()) && (
-                                        <button onClick={() => reprendreAnalyse(selectedTrade)} className="w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all active:scale-95">
+
+                                    {/* NEURAL FEEDBACK (Réinjecté ici) */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-green-500/50">
+                                            <ShieldCheck size={14} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Neural_Feedback</span>
+                                        </div>
+                                        <div className="p-6 bg-green-500/[0.02] rounded-[32px] border border-green-500/10 text-green-400/70 text-[11px] leading-relaxed whitespace-pre-wrap">
+                                            {selectedTrade.feedback || "> MENTOR_IA: Aucune rétroaction disponible pour ce cycle."}
+                                        </div>
+                                    </div>
+
+                                    {/* Bouton Restauration */}
+                                    {['BROUILLON', 'DRAFT'].includes(String(selectedTrade.statut || "").toUpperCase().trim()) && (
+                                        <button 
+                                            onClick={() => reprendreAnalyse(selectedTrade)} 
+                                            className="w-full py-5 bg-blue-600 text-white rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all active:scale-95 shadow-xl shadow-blue-900/20"
+                                        >
                                             <Play size={14} fill="white" /> Restaurer_Session
                                         </button>
                                     )}
