@@ -171,25 +171,32 @@ async def route_update_capital(amount: float = Query(...), token: str = Depends(
 # --- ROUTES ANALYSE & TOOLS ---
 
 @app.post("/analyse/swing")
-async def route_analyse(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
+async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
+    # 1. GARDE DE SÉCURITÉ : On bloque tout ce qui n'est pas SWING
+    if data.mode.upper() != "SWING":
+        raise HTTPException(
+            status_code=400, 
+            detail="Route invalide : cette route est exclusivement réservée au mode SWING."
+        )
+
     try:
         # 0. INITIALISATION CONTEXTE
         current_metrics = dashboard_engine.get_full_metrics()
         is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        # 1. RÉCUPÉRATION DES NEWS
+        # 1. RÉCUPÉRATION DES NEWS (Spécifique Swing)
         alerte_news = ""
         try:
             shared_guard = MarketGuard()
             bridge = BridgeNewsInterface(guard_instance=shared_guard)
-            alerte = bridge.get_live_alerts(data.actif, data.mode)
+            # On force le mode SWING ici pour la cohérence
+            alerte = bridge.get_live_alerts(data.actif, "SWING")
             if alerte:
                 alerte_news = f"{alerte}\n\n"
         except Exception as e:
-            logging.error(f"⚠️ Erreur news : {e}")
+            logging.error(f"⚠️ Erreur news (Swing) : {e}")
 
-        # 2. TENTATIVE IA (Architecture unifiée)
-        # L'IA reçoit data.mode (SWING/DAILY/SCALP), elle s'ajuste dynamiquement via mentor_ia
+        # 2. TENTATIVE IA (Architecture unifiée pour Swing)
         feedback_ia = "Analyse IA temporairement indisponible."
         
         try:
@@ -201,7 +208,7 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
             
             app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
 
-            # Le moteur mentor_ia reçoit ici tout le contexte, y compris le mode
+            # Le moteur mentor_ia reçoit explicitement le mode SWING
             score, verdict, couleur = mentor_ia.analyser_ia_pro(
                 app_mock, 
                 "",              # Ancienne analyse
@@ -211,29 +218,33 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
                 data.conviction, 
                 "",              # Guide étudiant
                 "",              # Guide expert
-                data.mode        # C'est ici que le moteur choisit entre SWING, DAILY, SCALP
+                "SWING"          # Forcé ici
             )
             feedback_ia = verdict
         except Exception as ie:
-            logging.error(f"⚠️ Erreur moteur IA ({data.mode}) : {ie}")
+            logging.error(f"⚠️ Erreur moteur IA (Swing) : {ie}")
             feedback_ia = f"Erreur de génération : {str(ie)}"
 
         # 3. FUSION PROPRE
-        feedback_final = f"{alerte_news}[ANALYSE IA — {data.mode.upper()}]\n{feedback_ia}"
+        feedback_final = f"{alerte_news}[ANALYSE IA — SWING]\n{feedback_ia}"
 
-        # 4. SAUVEGARDE COMPLÈTE (Mapping explicite)
-        # On envoie ici toutes les données pour éviter le retour "terme/vide"
+        # 4. SAUVEGARDE COMPLÈTE
         trade_id = database.sauvegarder_trade_final(
             actif=data.actif,
-            biais=data.position,        # On mappe la position (ACHAT/VENTE)
+            biais=data.position,
             conviction=data.conviction,
-            score_ia=0,
+            score_ia=0, 
             analyse=data.analyse,
             feedback=feedback_final,
-            statut=data.statut,         # Statut (BROUILLON/WIN/LOSS)
-            position=data.position,     # Position (ACHAT/VENTE)
-            mode=data.mode,             # Mode (SWING/DAILY/SCALP)
-            t_type=data.type            # Type (ex: SWING)
+            statut=data.statut,
+            position=data.position,
+            mode="SWING", # Forcé ici aussi
+            t_type=data.type,
+            # Données techniques
+            entry_price=data.entry_price,
+            stop_loss=data.stop_loss,
+            take_profit=data.take_profit,
+            rr=data.calculated_rr
         )
         
         return {
@@ -243,74 +254,142 @@ async def route_analyse(data: TradeRequest, token: str = Depends(verifier_sessio
         }
 
     except Exception as e:
-        logging.error(f"❌ Erreur critique route_analyse : {e}")
+        logging.error(f"❌ Erreur critique route_analyse_swing : {e}")
         return {
             "feedback": f"Erreur système critique : {str(e)}", 
             "engine_status": "ERROR"
         }
     
+
+@app.post("/analyse/daily")
+async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
+    if data.mode.upper() != "DAILY":
+        raise HTTPException(status_code=400, detail="Route réservée au mode DAILY.")
+
+    try:
+        # Initialisation et news (Adaptées si besoin pour le Daily)
+        # ... (Logique identique à Swing)
+        
+        trade_id = database.sauvegarder_trade_final(
+            actif=data.actif,
+            biais=data.position,
+            conviction=data.conviction,
+            score_ia=0,
+            analyse=data.analyse,
+            feedback="Analyse Daily en cours de développement...",
+            statut=data.statut,
+            position=data.position,
+            mode="DAILY",
+            t_type=data.type,
+            entry_price=data.entry_price,
+            stop_loss=data.stop_loss,
+            take_profit=data.take_profit,
+            rr=data.calculated_rr
+        )
+        
+        return {"feedback": "Mode Daily initialisé.", "engine_status": "SAFE", "trade_id": trade_id}
+    except Exception as e:
+        logging.error(f"❌ Erreur critique route_analyse_daily : {e}")
+        return {"feedback": f"Erreur : {str(e)}", "engine_status": "ERROR"}    
+
+@app.post("/analyse/scalp")
+async def route_analyse_scalp(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
+    if data.mode.upper() != "SCALP":
+        raise HTTPException(status_code=400, detail="Route réservée au mode SCALP.")
+
+    try:
+        # Initialisation
+        # ... (Logique identique)
+        
+        trade_id = database.sauvegarder_trade_final(
+            actif=data.actif,
+            biais=data.position,
+            conviction=data.conviction,
+            score_ia=0,
+            analyse=data.analyse,
+            feedback="Analyse Scalp en cours de développement...",
+            statut=data.statut,
+            position=data.position,
+            mode="SCALP",
+            t_type=data.type,
+            entry_price=data.entry_price,
+            stop_loss=data.stop_loss,
+            take_profit=data.take_profit,
+            rr=data.calculated_rr
+        )
+        
+        return {"feedback": "Mode Scalp initialisé.", "engine_status": "SAFE", "trade_id": trade_id}
+    except Exception as e:
+        logging.error(f"❌ Erreur critique route_analyse_scalp : {e}")
+        return {"feedback": f"Erreur : {str(e)}", "engine_status": "ERROR"}
+    
 @app.post("/database/save")
 async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
     try:
+        # Initialisation du contexte
         current_metrics = dashboard_engine.get_full_metrics()
-        risk_engine_data = current_metrics.get("risk_engine", {})
-        is_locked = risk_engine_data.get("status") == "LOCKDOWN"
+        is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
 
-        data_json = {
-            "entry_price": data.entry_price, "stop_loss": data.stop_loss,
-            "take_profit": data.take_profit, "calculated_rr": data.calculated_rr
-        }
+        # 1. TENTATIVE IA (Approche généralisée)
+        ia_success = False
+        feedback_ia = "Analyse IA temporairement indisponible." # Valeur par défaut robuste
 
-        # 1. TENTATIVE IA (Avec gestion de secours)
-        feedback_ia = "Analyse IA temporairement indisponible."
         try:
-            # On utilise l'instance de ton moteur (ou module mentor_ia)
-            # On passe les arguments de façon classique, pas seulement par mots-clés
             resultat = mentor_ia.lancer_analyse_api(
                 data.analyse, 
                 data.conviction, 
                 data.actif, 
-                {"ia_severite": "Strict" if is_locked else "Neutre"}
+                {"ia_severite": "Strict" if is_locked else "Neutre", "mode": data.mode}
             )
-            feedback_ia = resultat.get("verdict", feedback_ia)
+            # On vérifie si on a bien un verdict
+            verdict = resultat.get("verdict")
+            if verdict:
+                feedback_ia = verdict
+                ia_success = True
         except Exception as ie:
-            logging.error(f"⚠️ IA en échec, mode secours activé : {ie}")
+            logging.error(f"⚠️ IA en échec ({data.mode}) : {ie}")
 
-        # 2. INJECTION NEWS (Toujours fait)
+        # 2. INJECTION NEWS
         try:
             shared_guard = MarketGuard()
             bridge = BridgeNewsInterface(guard_instance=shared_guard)
             alerte = bridge.get_live_alerts(data.actif, data.mode)
             if alerte:
-                feedback_ia = f"{alerte}\n\n[ANALYSE IA]\n{feedback_ia}"
+                # On concatène proprement avec le feedback existant
+                feedback_ia = f"{alerte}\n\n[AUDIT IA]\n{feedback_ia}"
         except Exception as e:
             logging.error(f"⚠️ Erreur récupération news : {e}")
 
-        # 3. SAUVEGARDE (Sûre à 100%, indépendante de l'IA)
-        # 3. SAUVEGARDE (Mappage explicite des données)
+        # 3. SAUVEGARDE COMPLÈTE
+        # L'attribut 'feedback' est ici correctement mappé vers Supabase
         trade_id = database.sauvegarder_trade_final(
             actif=data.actif,
-            biais=data.position,        # On envoie la position actuelle (ACHAT/VENTE)
+            biais=data.position,
             conviction=data.conviction,
             score_ia=0,
             analyse=data.analyse,
-            feedback=feedback_ia,
-            statut=data.statut,         # Le statut WIN/LOSS/BROUILLON est ici
-            position=data.position,     # La direction réelle
-            mode=data.mode,
-            t_type=data.type
+            feedback=feedback_ia, # Correspond à l'attribut 'feedback' de Supabase
+            statut=data.statut,
+            position=data.position,
+            mode=data.mode.upper(),
+            t_type=data.type,
+            entry_price=data.entry_price,
+            stop_loss=data.stop_loss,
+            take_profit=data.take_profit,
+            rr=data.calculated_rr
         )
         
-        # On renvoie un statut explicite et le trade_id retourné par ta DB
         return {
             "status": "success", 
             "trade_id": trade_id, 
             "feedback": feedback_ia, 
+            "ia_status": "SUCCESS" if ia_success else "FALLBACK",
             "engine_status": "SAFE"
         }
+
     except Exception as e:
-        logging.error(f"❌ Erreur critique : {e}")
-        raise HTTPException(status_code=500, detail="Trade enregistré mais analyse IA indisponible.")
+        logging.error(f"❌ Erreur critique route_sauvegarde_generique : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde : {str(e)}")
 
 @app.post("/analyse/guardian")
 async def route_guardian_live_chat(data: GuardianRequest, token: str = Depends(verifier_session_terminal)):
