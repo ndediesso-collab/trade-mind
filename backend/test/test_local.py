@@ -17,7 +17,7 @@ import os
 import mentor_ia
 from mentor_ia import MarketGuard
 
-
+ 1. Analyse de test (Ton plan)
 analyse_complete = """
 . Analyse Daily : GBPUSD
 Contexte Macro & Setup Technique

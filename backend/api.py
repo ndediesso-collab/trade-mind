@@ -431,19 +431,18 @@ async def get_historique(token: str = Depends(verifier_session_terminal)):
         trades = database.recuperer_tout_historique()
         format_trades = []
         for t in trades:
+            # Mapping strict aligné sur la version stable (rollback)
             format_trades.append({
                 "id": t[0],
-                "date": str(t[1])[:16] if t[1] else "N/A",
-                "actif": str(t[2]).upper() if t[2] else "UNITÉ",
-                "biais": t[3] if len(t) > 3 else "NEUTRE",      # Colonne 3
-                "conviction": t[4] if len(t) > 4 else 50,       # Colonne 4
-                "score_ia": t[5] if len(t) > 5 else 0,          # Colonne 5
-                "analyse": t[6] if len(t) > 6 else "",          # Colonne 6
-                "resultat": t[7] if len(t) > 7 else "",         # Colonne 7
-                "statut": str(t[8]).upper() if len(t) > 8 else "BROUILLON", # Colonne 8
-                "position": t[9] if len(t) > 9 else "NEUTRE",   # Colonne 9
-                "mode": t[10] if len(t) > 10 else "ÉTUDIANT",   # Colonne 10
-                "type": t[11] if len(t) > 11 else "SWING"       # Colonne 11
+                "date": str(t[1])[:16] if len(t) > 1 and t[1] else "N/A",
+                "actif": str(t[2]).upper() if len(t) > 2 and t[2] else "UNITÉ",
+                "statut": str(t[3]).upper() if len(t) > 3 and t[3] else "BROUILLON",
+                "analyse": t[4] if len(t) > 4 and t[4] else "",
+                "position": str(t[5]).upper() if len(t) > 5 and t[5] else "NEUTRE",
+                "conviction": t[6] if len(t) > 6 else 50,
+                "mode": str(t[7]).upper() if len(t) > 7 and t[7] else "ÉTUDIANT",
+                "feedback": t[8] if len(t) > 8 and t[8] else "",
+                "type": str(t[9]).upper() if len(t) > 9 else "SWING"
             })
         return {"trades": format_trades}
     except Exception as e:
