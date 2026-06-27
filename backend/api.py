@@ -456,20 +456,18 @@ async def get_trade_details(trade_id: int, token: str = Depends(verifier_session
         if not t:
             raise HTTPException(status_code=404, detail="Analyse introuvable")
             
-        # Mapping explicite pour garantir la structure au frontend
+        # Mapping ajusté sur la structure stable (10 colonnes : 0 à 9)
         trade_dict = {
             "id": t[0],
-            "date": str(t[1])[:16] if t[1] else "N/A",
-            "actif": t[2],
-            "biais": t[3],
-            "conviction": t[4],
-            "score_ia": t[5],
-            "analyse": t[6],
-            "resultat": t[7],
-            "statut": t[8],
-            "position": t[9],
-            "mode": t[10],
-            "type": t[11]
+            "date": str(t[1])[:16] if len(t) > 1 and t[1] else "N/A",
+            "actif": str(t[2]).upper() if len(t) > 2 and t[2] else "UNITÉ",
+            "statut": str(t[3]).upper() if len(t) > 3 and t[3] else "BROUILLON",
+            "analyse": t[4] if len(t) > 4 and t[4] else "",
+            "position": str(t[5]).upper() if len(t) > 5 and t[5] else "NEUTRE",
+            "conviction": t[6] if len(t) > 6 else 50,
+            "mode": str(t[7]).upper() if len(t) > 7 and t[7] else "ÉTUDIANT",
+            "feedback": t[8] if len(t) > 8 and t[8] else "",
+            "type": str(t[9]).upper() if len(t) > 9 else "SWING"
         }
         return trade_dict
     except Exception as e:
