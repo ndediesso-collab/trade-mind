@@ -945,19 +945,25 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     FORMAT DE SORTIE (STRICT)
     ═══════════════════════════════
     [NOTE] : X/10 (Qualité de la réflexion)
-    [STATUT] : VALIDÉ / PARTIEL / INCORRECT
-    [DÉCISION] : EXÉCUTER / AJUSTER / REFUSER
+    [STATUT] : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ
+    [DIAGNOSTIC] :
+    - VALIDATION DE STRUCTURE : Prêt pour une surveillance active sur les niveaux identifiés.
+    - AJUSTEMENT REQUIS : Revoir la gestion du risque ou la structure avant toute exposition.
+    - REFUSÉ : Plan non conforme aux standards de probabilité de Trade Mind.
 
     [AUDIT] :
-    - Risque & RR :
-    - Cohérence Macro/Technique :
-    - Analyse de la Structure :
-    - Biais Psychologique :
+    - Risque & RR : 
+    - Cohérence Macro/Technique : 
+    - Analyse de la Structure : 
+    - Biais Psychologique : 
 
     [ERREURS] : (Type : CRITIQUE / MAJEURE / MINEURE)
-    
+
     [PISTE D'OPTIMISATION] :
     1 action unique et concrète pour améliorer la performance sur ce trade ou le suivant.
+
+    ---
+    *Cette analyse est un audit de cohérence, pas un conseil financier. Analysez, testez et forgez votre propre intelligence. Vous êtes le seul maître de vos décisions.*
 
     ═══════════════════════════════
     RÈGLE DE SÉCURITÉ

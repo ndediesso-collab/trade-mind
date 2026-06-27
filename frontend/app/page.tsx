@@ -266,9 +266,17 @@ export default function Home() {
               </motion.button>
             </Link>
           </footer>
+          <FooterDisclaimer />
           
         </div>
       </div>
     </AuroraBackground>
   );
 }
+export const FooterDisclaimer = () => (
+  <div className="fixed bottom-0 left-0 w-full p-2 bg-[#0B0E14]/80 backdrop-blur-md border-t border-white/5 z-50">
+    <p className="text-[8px] text-zinc-700 font-sans uppercase tracking-[0.2em] text-center italic">
+      Trade Mind est un outil d'audit de cohérence basé sur l'IA. Ces analyses ne constituent pas des conseils financiers ou des signaux d'exécution. Le trading est une discipline de recherche permanente. Analysez, testez et forgez votre propre intelligence. Vous êtes le seul maître de vos décisions.
+    </p>
+  </div>
+);
