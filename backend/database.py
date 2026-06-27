@@ -86,16 +86,30 @@ def sauvegarder_trade_final(actif, biais, conviction, score_ia, analyse, feedbac
         return False
 
 def recuperer_tout_historique():
-    """Récupère l'historique sans forcer le tri sur le mot réservé si conflit."""
-    url = f"{SUPABASE_URL}/rest/v1/journal_final?select=id,date,actif,statut,analyse,position,conviction,mode,feedback,%22type%22"
+    """Récupère l'historique et normalise la structure pour éviter les erreurs d'index."""
+    # Sélection explicite incluant le champ "type" échappé
+    url = f"{SUPABASE_URL}/rest/v1/journal_final?select=id,date,actif,statut,analyse,position,conviction,mode,feedback,type"
     try:
         response = httpx.get(url, headers=HEADERS)
         if response.status_code == 200:
             res = response.json()
+            # Tri sécurisé par date
             res.sort(key=lambda x: x.get("date") or "", reverse=True)
+            
+            # Construction sécurisée du tuple (toujours 10 éléments)
             return [
-                (t["id"], t.get("date"), t.get("actif"), t.get("statut"), t.get("analyse"),
-                 t.get("position"), t.get("conviction"), t.get("mode"), t.get("feedback"), t.get("type"))
+                (
+                    t.get("id"),
+                    t.get("date"),
+                    t.get("actif"),
+                    t.get("statut"),
+                    t.get("analyse"),
+                    t.get("position"),
+                    t.get("conviction"),
+                    t.get("mode"),
+                    t.get("feedback"),
+                    t.get("type") # Supabase gère le champ "type" sans guillemets si précisé dans le select
+                )
                 for t in res
             ]
         print(f"⚠️ Erreur Historique API ({response.status_code}) : {response.text}")
