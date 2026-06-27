@@ -423,7 +423,7 @@ async def route_calcul(data: CalcRequest, token: str = Depends(verifier_session_
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# --- ROUTES HISTORIQUE ---
+# --- ROUTES HISTORIQUE ----
 
 @app.get("/historique/all")
 async def get_historique(token: str = Depends(verifier_session_terminal)):
