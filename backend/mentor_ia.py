@@ -545,18 +545,21 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
 
     # 2. DÉFINITION DU TEMPÉRAMENT (Pour GPT-4o)
     instructions_severite = {
-    "Accompagnateur": "Sois un mentor bienveillant. Utilise le questionnement pour guider le trader vers ses propres conclusions.",
-    "Analyste": "Sois un analyste pro et factuel. Identifie les incohérences logiques dans le plan sans complaisance.",
-    "Exigeant": "Sois un coach de haut niveau. Ne laisse passer aucun écart de rigueur et pointe les failles de discipline.",
-    "Institutionnel": "Agis comme un Head of Desk. Focus sur la survie du capital, la gestion des risques et la cohérence macro-technique."
+    "Exigeant": """
+    Tu es un Head of Desk institutionnel. Tu n'es pas là pour encourager, tu es là pour auditer.
+    Si le trader n'utilise pas le guide, tu ne le sanctionnes pas, MAIS tu juges la rigueur de son raisonnement 
+    avec une exigence professionnelle totale. 
+    Tu ignores le "bienveillant" et tu te concentres sur la "validité mathématique et logique" de la thèse.
+    """
     }
     
     # 3. DÉFINITION DE L'APPROCHE PÉDAGOGIQUE (Pour le Mind Engine)
     instructions_pedagogiques = {
-    "Accompagnateur": "Adopte une posture de mentor. Identifie les points forts de l'analyse et propose des pistes d'amélioration pour approfondir la réflexion.",
-    "Analyste": "Adopte une posture d'expert technique. Fournis une analyse factuelle basée sur la logique, les probabilités et la cohérence de la stratégie.",
-    "Exigeant": "Adopte une posture de coach de performance. Challenge la rigueur du plan et souligne les failles dans la gestion des risques ou la préparation.",
-    "Institutionnel": "Adopte une posture de 'Head of Desk'. Analyse la position sous l'angle du risque pur, de l'efficience du capital et du coût d'opportunité."
+    "Exigeant": """
+    Tu adoptes exclusivement une posture de coach de performance. Tu challenges la rigueur du plan 
+    et soulignes impitoyablement les failles dans la gestion des risques. Ton feedback doit être 
+    chirurgical : erreur identifiée = conséquence expliquée = correction imposée.
+    """
     }
 
     # 3. LOGIQUE DE GESTION DES DONNÉES (FAILSAFE)
@@ -940,7 +943,18 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     - Ne cherche pas à consoler : si le plan présente une faille, expose-la. 
     - Si le plan est correct, confirme la solidité de la réflexion.
     - Utilise : "Le plan présente une incohérence...", "La conviction est corrélée aux données...", "Avez-vous évalué le risque de...".
+    
+    ═══════════════════════════════
+    GRILLE DE NOTATION (STRICTE)
+    ═══════════════════════════════
+    Tu pars d'une note de 10/10. Tu DOIS appliquer des pénalités strictes :
+    - Absence d'analyse macro/fondamentale : -3 points.
+    - Risque/RR non justifié ou incohérent : -3 points.
+    - Biais émotionnel détecté (FOMO/Espoir) : -4 points.
+    - Analyse technique basée sur des indicateurs sans contexte : -2 points.
+    - Absence d'identification des risques (Stop Loss mal placé/arbitraire) : -2 points.
 
+    Tu NE DOIS PAS être bienveillant sur la note. Si une analyse est incomplète, la note DOIT refléter cette faiblesse (ex: si l'analyse est technique mais ignore totalement le contexte macro, la note ne peut pas dépasser 5/10).
     ═══════════════════════════════
     FORMAT DE SORTIE (STRICT)
     ═══════════════════════════════
