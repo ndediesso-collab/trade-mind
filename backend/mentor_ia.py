@@ -505,6 +505,7 @@ def get_news(actif, guard=None):
 
 # --- FONCTION PRIVÉE DE GESTION API (Léger & Réutilisable) ---
 def _exec_ia(prompt, client_architect, mode_upper):
+    client_architect = OpenAI(api_key=os.getenv("OPENAI_ARCHITECT_KEY"))
     try:
         response = client_architect.chat.completions.create(
             model="gpt-4o",
@@ -776,6 +777,7 @@ def analyser_ia_swing(app_instance,  nouvelle_analyse, actif, data_json=None, cl
     {instructions_mode}
     {instructions_macro}
     """
+        
     
     return _exec_ia(prompt, client_architect, mode_upper)
 
