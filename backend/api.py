@@ -23,6 +23,8 @@ from openai import OpenAI
 from Dashboard import dashboard_engine
 
 app = FastAPI(title="Trade Mind API - Mind Engine v2")
+# CRÉATION UNIQUE AU DÉMARRAGE (Singleton)
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # --- MIDDLEWARE ---
 app.add_middleware(
@@ -235,7 +237,7 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             data.analyse,    # nouvelle_analyse
             data.actif,      # actif
             data_json=data.model_dump(), # On passe l'objet complet au lieu de champs isolés
-            
+            client_architect = openai_client # Votre instance OpenAI
             )
             feedback_ia = verdict
         except Exception as ie:
@@ -322,6 +324,7 @@ async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_
             data.analyse,    # nouvelle_analyse
             data.actif,      # actif
             data_json=data.model_dump(), # On passe l'objet complet au lieu de champs isolés
+            client_architect= openai_client
             )
             feedback_ia = verdict
         except Exception as ie:
