@@ -598,10 +598,12 @@ def analyser_ia_swing(app_instance,  nouvelle_analyse, actif, data_json=None, cl
         # Ici, on prend une approche robuste :
         news_str_list = []
         for n in news_list:
+            # On vérifie SI c'est un dictionnaire AVANT de faire un .get()
             if isinstance(n, dict):
-                # Si c'est un dict, on extrait le titre ou on convertit en str
+                # On utilise .get() uniquement si c'est un dict
                 news_str_list.append(n.get('title', str(n)))
             else:
+                # Si n est déjà un string, on l'ajoute directement
                 news_str_list.append(str(n))
         
         instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
@@ -852,10 +854,12 @@ def analyser_ia_daily(app_instance, nouvelle_analyse,actif, data_json=None, clie
         # Ici, on prend une approche robuste :
         news_str_list = []
         for n in news_list:
+            # On vérifie SI c'est un dictionnaire AVANT de faire un .get()
             if isinstance(n, dict):
-                # Si c'est un dict, on extrait le titre ou on convertit en str
+                # On utilise .get() uniquement si c'est un dict
                 news_str_list.append(n.get('title', str(n)))
             else:
+                # Si n est déjà un string, on l'ajoute directement
                 news_str_list.append(str(n))
         
         instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
@@ -1101,10 +1105,12 @@ def analyser_ia_scalp(app_instance,nouvelle_analyse, actif, data_json=None, clie
         # Ici, on prend une approche robuste :
         news_str_list = []
         for n in news_list:
+            # On vérifie SI c'est un dictionnaire AVANT de faire un .get()
             if isinstance(n, dict):
-                # Si c'est un dict, on extrait le titre ou on convertit en str
+                # On utilise .get() uniquement si c'est un dict
                 news_str_list.append(n.get('title', str(n)))
             else:
+                # Si n est déjà un string, on l'ajoute directement
                 news_str_list.append(str(n))
         
         instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
