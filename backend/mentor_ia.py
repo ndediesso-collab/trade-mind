@@ -523,7 +523,7 @@ def _exec_ia(prompt, client_architect, mode_upper):
         return 0, f"Erreur : {e}", "#34495E"
 
 # --- FONCTION SWING (Texte intégral respecté) ---
-def analyser_ia_swing(app_instance, data_json, nouvelle_analyse, actif, conviction, client_architect):
+def analyser_ia_swing(app_instance, ancienne_analyse, nouvelle_analyse, statut_analyse, actif, conviction, guide_etudiant_contenu, guide_expert_contenu, mode="SWING", data_json=None):
     mode_upper = "SWING"
     
     GUIDE_REFLEXION = GUIDE_REFLEXION_SWING
@@ -777,7 +777,7 @@ def analyser_ia_swing(app_instance, data_json, nouvelle_analyse, actif, convicti
     
     return _exec_ia(prompt, client_architect, mode_upper)
 
-def analyser_ia_daily(app_instance, data_json, nouvelle_analyse, actif, conviction, client_architect):
+def analyser_ia_daily(app_instance, ancienne_analyse, nouvelle_analyse, statut_analyse, actif, conviction, guide_etudiant_contenu, guide_expert_contenu, mode="SWING", data_json=None):
     mode_upper = "DAILY"
     
     GUIDE_REFLEXION = GUIDE_REFLEXION_DAILY
@@ -1026,7 +1026,7 @@ def analyser_ia_daily(app_instance, data_json, nouvelle_analyse, actif, convicti
     
     return _exec_ia(prompt, client_architect, mode_upper)
 
-def analyser_ia_scalp(app_instance, data_json, nouvelle_analyse, actif, conviction, client_architect):
+def analyser_ia_scalp(app_instance, ancienne_analyse, nouvelle_analyse, statut_analyse, actif, conviction, guide_etudiant_contenu, guide_expert_contenu, mode="SWING", data_json=None):
     mode_upper = "SCALP"
     
     GUIDE_REFLEXION = GUIDE_REFLEXION_SCALP
