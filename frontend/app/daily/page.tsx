@@ -252,7 +252,7 @@ export default function DailyMode() {
           conviction: currentPos.conviction,
           position: currentPos.biais,
           statut: "Brouillon",
-          mode: "DAILY_DEBUT",
+          mode: "DAILY",
           entry_price: currentPos.entryPrice,
           stop_loss: currentPos.stopLoss,
           take_profit: currentPos.takeProfit,
