@@ -102,7 +102,6 @@ async def detecter_zone_geographique(request: Request) -> dict:
 
 
 # --- MODÈLES DE DONNÉES ---
-# --- MODÈLES DE DONNÉES ---
 class TradeRequest(BaseModel):
     actif: str
     analyse: str
@@ -138,6 +137,17 @@ class GuardianRequest(BaseModel):
     message: str
     analyse_complete: str
     actif: str
+
+class CloturePosition(BaseModel):
+    # Ajuste ces champs selon les données réelles de tes positions
+    actif: str
+    statut: str
+    resultat: Optional[str] = None
+    performance: Optional[float] = None
+
+class ClotureRequest(BaseModel):
+    positions: list[CloturePosition]
+    postSessionText: str
 
 
 # --- ROUTE ABONNEMENT & PRIX DYNAMIQUE ---
@@ -271,34 +281,125 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
 
 @app.post("/analyse/daily")
 async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
+    # 1. GARDE DE SÉCURITÉ
     if data.mode.upper() != "DAILY":
         raise HTTPException(status_code=400, detail="Route réservée au mode DAILY.")
 
     try:
-        # Initialisation et news (Adaptées si besoin pour le Daily)
-        # ... (Logique identique à Swing)
-        
+        # 0. INITIALISATION CONTEXTE
+        current_metrics = dashboard_engine.get_full_metrics()
+        is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
+
+        # 1. RÉCUPÉRATION DES NEWS (Spécifique au Daily)
+        alerte_news = ""
+        try:
+            shared_guard = MarketGuard()
+            bridge = BridgeNewsInterface(guard_instance=shared_guard)
+            alerte = bridge.get_live_alerts(data.actif, "DAILY")
+            if alerte:
+                alerte_news = f"{alerte}\n\n"
+        except Exception as e:
+            logging.error(f"⚠️ Erreur news (Daily) : {e}")
+
+        # 2. TENTATIVE IA (Appel Mentor IA)
+        feedback_ia = "Analyse IA temporairement indisponible."
+        try:
+            class AppMock:
+                def __init__(self, settings):
+                    self.user_settings = settings
+                    self.info_sl_tp = "N/A"
+                    self.raisonnement_user = "N/A"
+            
+            app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
+
+            # Utilisation de l'IA pour auditer le Daily
+            score, verdict, couleur = mentor_ia.analyser_ia_pro(
+                app_mock, "", data.analyse, data.statut, data.actif, 
+                data.conviction, "", "", "DAILY"
+            )
+            feedback_ia = verdict
+        except Exception as ie:
+            logging.error(f"⚠️ Erreur moteur IA (Daily) : {ie}")
+            feedback_ia = f"Erreur de génération : {str(ie)}"
+
+        # 3. FUSION DU FEEDBACK
+        feedback_final = f"{alerte_news}[ANALYSE IA — DAILY]\n{feedback_ia}"
+
+        # 4. CONVERSION TYPES
+        try:
+            entry_f = float(data.entry_price) if data.entry_price else 0.0
+            sl_f = float(data.stop_loss) if data.stop_loss else 0.0
+            tp_f = float(data.take_profit) if data.take_profit else 0.0
+            rr_f = float(data.calculated_rr) if data.calculated_rr else 0.0
+        except (ValueError, TypeError):
+            entry_f, sl_f, tp_f, rr_f = 0.0, 0.0, 0.0, 0.0
+
+        # 5. SAUVEGARDE COMPLÈTE
         trade_id = database.sauvegarder_trade_final(
             actif=data.actif,
             biais=data.position,
             conviction=data.conviction,
             score_ia=0,
             analyse=data.analyse,
-            feedback="Analyse Daily en cours de développement...",
+            feedback=feedback_final,
             statut=data.statut,
             position=data.position,
             mode="DAILY",
             t_type=data.type,
-            entry_price=data.entry_price,
-            stop_loss=data.stop_loss,
-            take_profit=data.take_profit,
-            rr=data.calculated_rr
+            entry_price=entry_f,
+            stop_loss=sl_f,
+            take_profit=tp_f,
+            rr=rr_f
         )
         
-        return {"feedback": "Mode Daily initialisé.", "engine_status": "SAFE", "trade_id": trade_id}
+        return {
+            "feedback": feedback_final,
+            "engine_status": "SAFE",
+            "trade_id": trade_id
+        }
+
     except Exception as e:
         logging.error(f"❌ Erreur critique route_analyse_daily : {e}")
-        return {"feedback": f"Erreur : {str(e)}", "engine_status": "ERROR"}    
+        return {"feedback": f"Erreur système : {str(e)}", "engine_status": "ERROR"}
+
+@app.post("/analyse/daily/cloture")
+async def route_cloture_daily(request: ClotureRequest, token: str = Depends(verifier_session_terminal)):
+    try:
+        # 0. INITIALISATION CONTEXTE
+        current_metrics = dashboard_engine.get_full_metrics()
+        is_locked = current_metrics.get("risk_engine", {}).get("status") == "LOCKDOWN"
+        
+        # 1. PRÉPARATION DES DONNÉES POUR LE MENTOR
+        # On construit une synthèse textuelle des positions pour que l'IA puisse auditer le processus
+        resume_positions = "\n".join([
+            f"Position {i+1} ({p.actif}) : {p.statut} | Audit IA : {p.iaVerdict}" 
+            for i, p in enumerate(request.positions)
+        ])
+        
+        # 2. GÉNÉRATION DU DÉBRIEF VIA TON MOTEUR EXISTANT
+        # On utilise la fonction 'generer_verdict_final_ia' que tu as déjà dans mentor_ia.py
+        feedback = mentor_ia.generer_verdict_final_ia(
+            analyse_init=resume_positions, 
+            logs_discipline="Session Daily clôturée", 
+            resultat=f"Fin de session. Débrief : {request.postSessionText}", 
+            prix_cloture="N/A"
+        )
+        
+        # 3. LOGGING ET RETOUR
+        logging.info("Session Daily clôturée et auditée par MentorIA.")
+        
+        return {
+            "status": "success", 
+            "feedback": feedback,
+            "engine_status": "SAFE" if not is_locked else "WARNING"
+        }
+    
+    except Exception as e:
+        logging.error(f"❌ Erreur critique route_cloture_daily : {format_exc()}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erreur lors de la clôture : {str(e)}"
+        )
 
 @app.post("/analyse/scalp")
 async def route_analyse_scalp(data: TradeRequest, token: str = Depends(verifier_session_terminal)):

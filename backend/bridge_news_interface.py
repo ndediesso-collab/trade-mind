@@ -22,30 +22,41 @@ class BridgeNewsInterface:
         macro_events = self.guard.get_forex_factory_news(actif)
         geo_news = self.guard.get_geopolitical_news(actif, mode=mode)
         
-        # 3. Construction de la réponse agrégée
+       # 3. Construction de la réponse agrégée
         alert_msg = "⚠️ [FLASH INFO MARCHÉ - EXHAUSTIF]"
         alert_msg += f"\n\n🎭 INDICE FEAR & GREED (CNN): {sentiment.get('score', 'N/A')}/100"
-        
+
         # Bloc Macro : Utilisation du cache via get_forex_factory_news
         jours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
-        
+
         if isinstance(macro_events, list):
             if len(macro_events) > 0:
                 alert_msg += "\n\n📊 MACRO (Calendrier complet):"
                 for event in macro_events[:5]: 
-                    titre = event.get('title', str(event)) if isinstance(event, dict) else str(event)
-                    
-                    # Extraction et formatage du jour
-                    date_str = event.get('date', '') if isinstance(event, dict) else ''
-                    prefixe_jour = ""
-                    if date_str:
-                        try:
-                            dt = datetime.strptime(date_str.split('T')[0], '%Y-%m-%d')
-                            prefixe_jour = f"[{jours[dt.weekday()]}] "
-                        except:
-                            prefixe_jour = ""
-                            
-                    alert_msg += f"\n• {prefixe_jour}{titre}"
+                    if isinstance(event, dict):
+                        titre = event.get('title', 'Événement inconnu')
+                        
+                        # Extraction des données chiffrées
+                        actuel = event.get('actual', 'N/A')
+                        prevu = event.get('forecast', 'N/A')
+                        prec = event.get('previous', 'N/A')
+                        
+                        # Extraction et formatage du jour
+                        date_str = event.get('date', '')
+                        prefixe_jour = ""
+                        if date_str:
+                            try:
+                                dt = datetime.strptime(date_str.split('T')[0], '%Y-%m-%d')
+                                prefixe_jour = f"[{jours[dt.weekday()]}] "
+                            except:
+                                prefixe_jour = ""
+                        
+                        # Formatage de la ligne avec les données
+                        donnees_str = f" | Prévu: {prevu} | Actuel: {actuel} | Préc: {prec}"
+                        alert_msg += f"\n• {prefixe_jour}{titre}{donnees_str}"
+                    else:
+                        # Fallback pour le format texte brut
+                        alert_msg += f"\n• {str(event)}"
             else:
                 alert_msg += "\n\n📊 MACRO: Calendrier économique en cours de synchronisation."
                 alert_msg += "\n💡 Le flux est momentanément indisponible."

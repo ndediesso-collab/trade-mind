@@ -36,6 +36,7 @@ interface TradePosition {
   analyseText: string;
   statutPosition: string; // "Brouillon" | "WIN" | "LOSS" | "BE"
   auditedByIa: boolean;
+  iaVerdict: string; // Ajouté pour permettre le stockage de l'audit IA par onglet
 }
 
 export default function DailyMode() {
@@ -57,9 +58,45 @@ export default function DailyMode() {
 
   // --- MATRICE DE STRUCTURE DES 3 POSITIONS SIMULTANÉES ---
   const [positions, setPositions] = useState<TradePosition[]>([
-    { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false },
-    { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false },
-    { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false }
+    { 
+      actif: "EURUSD", 
+      biais: "NEUTRE", 
+      entryPrice: "", 
+      stopLoss: "", 
+      takeProfit: "", 
+      conviction: 50, 
+      calculatedRR: null, 
+      analyseText: "", 
+      statutPosition: "Brouillon", 
+      auditedByIa: false, 
+      iaVerdict: "" 
+    },
+    { 
+      actif: "EURUSD", 
+      biais: "NEUTRE", 
+      entryPrice: "", 
+      stopLoss: "", 
+      takeProfit: "", 
+      conviction: 50, 
+      calculatedRR: null, 
+      analyseText: "", 
+      statutPosition: "Brouillon", 
+      auditedByIa: false, 
+      iaVerdict: "" 
+    },
+    { 
+      actif: "EURUSD", 
+      biais: "NEUTRE", 
+      entryPrice: "", 
+      stopLoss: "", 
+      takeProfit: "", 
+      conviction: 50, 
+      calculatedRR: null, 
+      analyseText: "", 
+      statutPosition: "Brouillon", 
+      auditedByIa: false, 
+      iaVerdict: "" 
+    }
   ]);
 
   // --- ÉTATS CALCULATEUR DE LOTS (UNIFIÉ SWING) ---
@@ -187,11 +224,14 @@ export default function DailyMode() {
 
   // --- ENGINE ACTION 1 : VÉRIFICATION ET AUDIT PAR L'IA ARCHITECTE ---
   const handleIaThèseAudit = async () => {
-    if (!currentPos.analyseText.trim() || !currentPos.actif) {
+    // 1. Validation de sécurité des données entrantes
+    if (!currentPos.analyseText?.trim() || !currentPos.actif) {
       setIaVerdict("> SÉCURITÉ : L'actif et la rédaction sémantique de la thèse sont obligatoires pour l'audit.");
       setConsoleTab("ARCHITECTE");
       return;
     }
+
+    // 2. Blocage Risk Engine
     if (currentPos.calculatedRR !== null && currentPos.calculatedRR < 2) {
       setIaVerdict("> BLOCAGE RISK_ENGINE : Ratio RR inférieur à 1:2. Impossible d'auditer un signal hors cadre de survie.");
       setConsoleTab("ARCHITECTE");
@@ -219,10 +259,23 @@ export default function DailyMode() {
           calculated_rr: currentPos.calculatedRR
         })
       });
+
+      if (!res.ok) throw new Error("Réponse serveur invalide");
+
       const data = await res.json();
-      updateCurrentPosition({ auditedByIa: true });
-      setIaVerdict(`> ARCHITECTE ENGINE : AUDIT INTRADAY COMPLET (POSITION ${activePositionTab + 1})\n\n${data.feedback || data.verdict}`);
+      
+      // 3. Mise à jour de l'état de la position avec le résultat de l'audit
+      const finalVerdict = `> ARCHITECTE ENGINE : AUDIT INTRADAY COMPLET (POSITION ${activePositionTab + 1})\n\n${data.feedback || data.verdict}`;
+      
+      updateCurrentPosition({ 
+        auditedByIa: true,
+        iaVerdict: finalVerdict // Mise à jour de la mémoire locale de la position
+      });
+      
+      setIaVerdict(finalVerdict);
+      
     } catch (e) {
+      console.error("Erreur Audit:", e);
       setIaVerdict("> ERREUR : Connexion rompue avec l'Architecte Python.");
     } finally {
       setIsLoading(false);
@@ -348,10 +401,11 @@ export default function DailyMode() {
         setPostSessionText("");
         setCurrentTradeId(null);
         setPositions([
-          { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false },
-          { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false },
-          { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false }
+          { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false, iaVerdict: "" },
+          { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false, iaVerdict: "" },
+          { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false, iaVerdict: "" }
         ]);
+        
         localStorage.removeItem("tm_daily_cache_v2");
         setSessionStatus("DEBUT");
         setIaVerdict(`> ARCHITECTE ENGINE : SÉANCE COMPLÈTEMENT VERROUILLÉE\n\n${data.feedback || "Dossier archivé."}`);
@@ -381,9 +435,45 @@ export default function DailyMode() {
   const reinitialiserWorkspace = () => {
     if (confirm("Voulez-vous purger la mémoire de travail de la séance active ?")) {
       setPositions([
-        { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false },
-        { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false },
-        { actif: "EURUSD", biais: "NEUTRE", entryPrice: "", stopLoss: "", takeProfit: "", conviction: 50, calculatedRR: null, analyseText: "", statutPosition: "Brouillon", auditedByIa: false }
+        { 
+          actif: "EURUSD", 
+          biais: "NEUTRE", 
+          entryPrice: "", 
+          stopLoss: "", 
+          takeProfit: "", 
+          conviction: 50, 
+          calculatedRR: null, 
+          analyseText: "", 
+          statutPosition: "Brouillon", 
+          auditedByIa: false, 
+          iaVerdict: "" 
+        },
+        { 
+          actif: "EURUSD", 
+          biais: "NEUTRE", 
+          entryPrice: "", 
+          stopLoss: "", 
+          takeProfit: "", 
+          conviction: 50, 
+          calculatedRR: null, 
+          analyseText: "", 
+          statutPosition: "Brouillon", 
+          auditedByIa: false, 
+          iaVerdict: "" 
+        },
+        { 
+          actif: "EURUSD", 
+          biais: "NEUTRE", 
+          entryPrice: "", 
+          stopLoss: "", 
+          takeProfit: "", 
+          conviction: 50, 
+          calculatedRR: null, 
+          analyseText: "", 
+          statutPosition: "Brouillon", 
+          auditedByIa: false, 
+          iaVerdict: "" 
+        }
       ]);
       setPostSessionText("");
       setGuardianHistory([]);
