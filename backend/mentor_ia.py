@@ -102,6 +102,26 @@ GUIDE_REFLEXION_SCALP = """[1 — Contexte & Filtres
 • Clarté Mentale : 100% focus ?
 WORKSPACE_ACTIVE_SCALP"""
 
+# DÉFINITION DU TEMPÉRAMENT (Pour GPT-4o)
+instructions_severite = {
+"Exigeant": """
+Tu es un Head of Desk institutionnel. Tu n'es pas là pour encourager, tu es là pour auditer.
+Si le trader n'utilise pas le guide, tu ne le sanctionnes pas, MAIS tu juges la rigueur de son raisonnement 
+avec une exigence professionnelle totale. 
+Tu ignores le "bienveillant" et tu te concentres sur la "validité mathématique et logique" de la thèse.
+"""
+}
+
+# 6. DÉFINITION DE L'APPROCHE PÉDAGOGIQUE (Pour le Mind Engine)
+instructions_pedagogiques = {
+"Exigeant": """
+Tu adoptes exclusivement une posture de coach de performance. Tu challenges la rigueur du plan 
+et soulignes impitoyablement les failles dans la gestion des risques. Ton feedback doit être 
+chirurgical : erreur identifiée = conséquence expliquée = correction imposée.
+"""
+}
+
+
 # ====== CLASSE MARKETGUARD (INTÉGRÉE) =======
 class MarketGuard:
     def __init__(self):
@@ -483,20 +503,30 @@ def get_news(actif, guard=None):
     
     return resultat
 
+# --- FONCTION PRIVÉE DE GESTION API (Léger & Réutilisable) ---
+def _exec_ia(prompt, client_architect, mode_upper):
+    try:
+        response = client_architect.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : Exigeant."}, 
+                {"role": "user", "content": prompt}
+            ]
+        )
+        reponse_ia = response.choices[0].message.content 
+        match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', reponse_ia)
+        couleur = match.group(0) if match else "#2B2B2B"
+        note_match = re.search(r'\d+', reponse_ia)
+        score = int(note_match.group()) if note_match else 5
+        return score, reponse_ia, couleur 
+    except Exception as e:
+        return 0, f"Erreur : {e}", "#34495E"
 
-def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_analyse, actif, conviction, guide_etudiant_contenu, guide_expert_contenu, mode="SWING", data_json=None):
+# --- FONCTION SWING (Texte intégral respecté) ---
+def analyser_ia_swing(app_instance, data_json, nouvelle_analyse, actif, conviction, client_architect):
+    mode_upper = "SWING"
     
-    mode_upper = str(mode).upper() if mode else "SWING"
-
-    mode_upper = mode.upper()
-    role_titre = "Analyste Trading"
-    mission_specifique = "Accompagner le trader dans son analyse."
-    instructions_mode = "Adopte une posture professionnelle et factuelle."
-    """
-    Fonction principale d'appel à l'API OpenAI avec spécialisation dynamique par mode.
-    Conserve le prompt original pour le mode SWING.
-    """
-    
+    GUIDE_REFLEXION = GUIDE_REFLEXION_SWING
     user_settings = getattr(app_instance, 'user_settings', {})
     severite = user_settings.get("ia_severite", "Neutre")
     
@@ -543,26 +573,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     max_risk = user_settings.get("risque_max", 1.0)
     rr_min = user_settings.get("rr_min", 2.0)
 
-    # 5. DÉFINITION DU TEMPÉRAMENT (Pour GPT-4o)
-    instructions_severite = {
-    "Exigeant": """
-    Tu es un Head of Desk institutionnel. Tu n'es pas là pour encourager, tu es là pour auditer.
-    Si le trader n'utilise pas le guide, tu ne le sanctionnes pas, MAIS tu juges la rigueur de son raisonnement 
-    avec une exigence professionnelle totale. 
-    Tu ignores le "bienveillant" et tu te concentres sur la "validité mathématique et logique" de la thèse.
-    """
-    }
-    
-    # 6. DÉFINITION DE L'APPROCHE PÉDAGOGIQUE (Pour le Mind Engine)
-    instructions_pedagogiques = {
-    "Exigeant": """
-    Tu adoptes exclusivement une posture de coach de performance. Tu challenges la rigueur du plan 
-    et soulignes impitoyablement les failles dans la gestion des risques. Ton feedback doit être 
-    chirurgical : erreur identifiée = conséquence expliquée = correction imposée.
-    """
-    }
-
-    # 7. LOGIQUE DE GESTION DES DONNÉES (FAILSAFE)
+    # 6. LOGIQUE DE GESTION DES DONNÉES (FAILSAFE)
     news_list = market_data.get('news', [])
     
     if not news_list:
@@ -595,178 +606,64 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
         
         instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
 
-    # 8. LOGIQUE DE SÉLECTION DU MODE (SQUELETTE DYNAMIQUE)
     
-    if mode_upper == "DAILY":
-        GUIDE_REFLEXION = GUIDE_REFLEXION_DAILY
-        role_titre = "Auditeur Intraday & Risk Manager"
-        mission_specifique = (
-            "Auditer la cohérence du plan intraday, identifier les failles de risque "
-            "et exiger une exécution conforme aux standards institutionnels."
-        )
-        instructions_mode = """
-        [LOGIQUE DAILY - AUDIT INTRADAY]
-
-        MISSION : 
-        Tu es un Head of Desk institutionnel. Ton rôle est de challenger chaque paramètre du plan de trading 
-        avec une rigueur absolue. Tu n'es pas là pour accompagner, tu es là pour auditer.
-
-        AVERTISSEMENT :
-        Tu ne fournis aucun signal. Tu es un système d'audit. Le trader est seul responsable de ses décisions.
-
-        ═══════════════════════════════
-        PROTOCOLE D'AUDIT (RÉFÉRENCE)
-        ═══════════════════════════════
-        - Le guide {GUIDE_REFLEXION} est à ta disposition. Utilise-le comme standard pour mesurer la solidité du setup.
-        - Ton audit ne dépend pas de l'utilisation de ce guide par le trader, mais de la solidité logique et 
-          de la gestion des risques démontrées dans son plan.
-        - Identifie froidement les angles morts et les failles. Si une partie cruciale est absente, 
-          tu l'inscris comme une erreur immédiate dans ta grille d'audit.
-
-        ═══════════════════════════════
-        1. VALIDATION DU CONTEXTE & ADR
-        ═══════════════════════════════
-        - Analyse la dynamique : Si l'actif a déjà couvert > 80% de son ADR, évalue si le TP est une opportunité ou une erreur d'extension.
-
-        ═══════════════════════════════
-        2. AUDIT DU TIMING & CLÔTURE
-        ═══════════════════════
-        - Session : Valide la corrélation avec les Killzones. 
-        - Efficience : Audite le timing d'entrée. Toute entrée tardive ou hors session doit être pointée comme une erreur d'exécution.
-
-        ═══════════════════════
-        3. RISQUE & VOLATILITÉ
-        ═══════════════════════
-        - Chocs : Valide la préparation aux news High Impact.
-        - Stop Loss : Tout SL arbitraire (non basé sur l'ATR ou la structure) est une faute de gestion.
-
-        ═══════════════════════
-        4. AUDIT DE DISCIPLINE (COMPORTEMENT)
-        ═══════════════════════
-        - Détection : Identifie toute trace de FOMO ou d'anticipation non confirmée. 
-        - Sanction : Si le plan dérive de la rigueur institutionnelle, la note finale doit être impactée.
-
-        ═══════════════════════
-        5. PERFORMANCE
-        ═══════════════════════
-        - Exigence : Ta notation doit être basée sur la qualité du processus décisionnel. 
-        - Si la performance est médiocre, ton audit doit impérativement suggérer une mise à niveau vers des standards plus stricts.
-        """
-    
-    elif mode_upper == "SCALP":
-        GUIDE_REFLEXION = GUIDE_REFLEXION_SCALP
-        role_titre = "Coach de Performance Scalping & Analyste d’Exécution"
-        mission_specifique = (
-            "Débriefing de fin de session : analyser la discipline, "
-            "la qualité d’exécution et les comportements du trader "
-            "afin d’améliorer sa constance sur les micro-timeframes."
-        )
-        instructions_mode = """
-        [LOGIQUE SCALP - AUDIT DE HAUTE PRÉCISION]
-
-        MISSION : 
-        Tu es un Coach de performance Head of Desk. Ton rôle est d'auditer l'exécution technique et la discipline émotionnelle avec une rigueur implacable. 
-        Tu n'es pas là pour accompagner, tu es là pour sanctionner les écarts au processus.
-
-        AVERTISSEMENT :
-        Tu ne fournis aucun signal. Tu es un système d'audit. Le trader est seul responsable de ses décisions.
-
-        ═══════════════════════════════
-        PROTOCOLE D'AUDIT (RÉFÉRENCE)
-        ═══════════════════════════════
-        - Le guide {GUIDE_REFLEXION} est à ta disposition comme standard institutionnel.
-        - Identifie les failles de logique technique et les erreurs d'exécution. Si une condition de setup (Sweep, FVG, Breakout) est absente, tu la signales immédiatement comme une faute majeure de préparation.
-        - Ton approche est celle d'un Head of Desk : tu exiges une précision chirurgicale.
-
-        ═══════════════════════════════
-        1. AUDIT D'EXÉCUTION (AVANT TRADE)
-        ═══════════════════════
-        - Analyse technique : Le setup (Sweep, FVG, Breakout) doit être appuyé par une structure indiscutable. Toute entrée basée sur le "feeling" est une faute de discipline.
-        - Rentabilité : Si le TP ne couvre pas largement les spreads et frais, le trade est une erreur opérationnelle.
-        - Exigence : Tu ne tolères aucun setup approximatif.
-
-        ═══════════════════════
-        2. DÉTECTION D'IMPULSIVITÉ (COMPORTEMENT)
-        ═══════════════════════
-        - Analyse : Distingue l'opportunité tactique de la "chasse" par FOMO.
-        - Sanction : Si la confirmation est absente, le trade est une faute de comportement. Tu dois le pointer comme tel dans ton audit.
-
-        ═══════════════════════
-        3. DÉBRIEFING POST-SESSION (PERFORMANCE)
-        ═══════════════════════
-        - Discipline : Audite le respect du plan, l'absence de revenge trading et la force des exécutions.
-        - Analyse de Risque : Audite la cohérence de la taille de position et l'impact réel des coûts opérationnels. Toute dérive doit impacter la note finale.
-
-        ═══════════════════════
-        4. STRUCTURE DE RÉPONSE
-        ═══════════════════════
-        - Sois professionnel, factuel et direct.
-        - 3 erreurs principales identifiées.
-        - 3 points forts (si le processus a été strictement respecté).
-        - 1 objectif opérationnel concret.
-
-        [ORIENTATION STRATÉGIQUE]
-        Si la charge émotionnelle ou l'impulsivité devient contre-productive, exige une réduction immédiate de la fréquence des décisions ou un basculement vers le mode DAILY pour retrouver de la clarté. La discipline est la seule variable non négociable.
-        """
-
-    # 9. LE PROMPT FINAL (Mode SWING - Audit Stratégique & Comportemental)
-    else: # MODE SWING
-        GUIDE_REFLEXION = GUIDE_REFLEXION_SWING
-        role_titre = "Head of Desk - Macro Strategy & Risk"
-        mission_specifique = "Auditer la robustesse de la thèse macroéconomique et la discipline du Risk Management sur horizon temps long."
+    # [PROMPT SWING - COPIE INTÉGRALE]
+    GUIDE_REFLEXION = GUIDE_REFLEXION_SWING
+    role_titre = "Head of Desk - Macro Strategy & Risk"
+    mission_specifique = "Auditer la robustesse de la thèse macroéconomique et la discipline du Risk Management sur horizon temps long."
         
-        instructions_mode = """
-        [LOGIQUE SWING - AUDIT DE RÉSILIENCE INSTITUTIONNELLE]
+    instructions_mode = """
+    [LOGIQUE SWING - AUDIT DE RÉSILIENCE INSTITUTIONNELLE]
 
-        MISSION : 
-        Tu es un Head of Desk supervisant une équipe de traders Swing. Ton audit ne porte pas sur la rapidité, mais sur la solidité de la thèse macroéconomique et la pertinence de la gestion du risque face au bruit de marché.
-        
-        AVERTISSEMENT :
-        Tu ne fournis aucun signal. Tu es un système d'audit. Le trader est seul responsable de ses décisions.
-
-        ═══════════════════════════════
-        PROTOCOLE D'AUDIT (RÉFÉRENCE)
-        ═══════════════════════════════
-        - Le guide {GUIDE_REFLEXION} est ton standard institutionnel.
-        - Ton approche est celle d'un stratège : tu exiges une vue d'ensemble (Macro) alliée à une précision technique (Structure).
-        - Si une divergence existe entre la thèse fondamentale (ex: taux, géopolitique) et le setup technique, tu dois impérativement le signaler comme un risque majeur.
-
-        ═══════════════════════════════
-        1. VALIDATION DE LA THÈSE MACRO
-        ═══════════════════════════════
-        - Cohérence Fondamentale : Le biais (Long/Short) est-il soutenu par le contexte macro (taux, banques centrales, flux de capitaux) ?
-        - Anticipation : Le trade est-il une réaction à un mouvement passé ou une anticipation basée sur un narratif solide ? Toute entrée "réactive" sans logique fondamentale est une faute.
-
-        ═══════════════════════════════
-        2. GESTION DU RISQUE & RR
-        ═══════════════════════════════
-        - Résilience : Le Stop Loss doit être placé en dehors du "bruit" de marché Swing. Un SL trop serré sur du Swing est une erreur opérationnelle.
-        - Rentabilité : Le ratio RR doit impérativement être >= 2.0. En dessous, le trade est refusé par défaut.
-        - Taille de position : Elle doit refléter une gestion du risque mathématique (Risque max {max_risk}%).
-
-        ═══════════════════════════════
-        3. ANALYSE DE STRUCTURE HAUTE FRÉQUENCE (HTF)
-        ═══════════════════════════════
-        - Zones : Les points d'entrée/sortie doivent être adossés à des zones institutionnelles (Supply/Demand, Order Blocks H4/Daily).
-        - Liquidité : Le plan doit identifier les zones de capture de liquidité. Un plan sans identification de liquidité est considéré comme superficiel.
-
-        ═══════════════════════════════
-        4. AUDIT COMPORTEMENTAL (PSYCHOLOGIE)
-        ═══════════════════════════════
-        - Discipline : Audite l'absence de biais émotionnels. Détecte la confiance excessive ou la peur de l'invalidation.
-        - Patience : Le trader Swing doit prouver sa capacité à laisser le trade "respirer".
-
-        ═══════════════════════════════
-        5. STRUCTURE DE RÉPONSE EXIGÉE
-        ═══════════════════════════════
-        - Ton : Froid, factuel, professionnel, institutionnel.
-        - Évaluation : Note sur 10 avec grille de pénalités stricte.
-        - Action : 1 action unique et concrète pour améliorer la performance.
-
-        [ORIENTATION STRATÉGIQUE]
-        Si la conviction est corrélée aux données, félicite la solidité. Si le setup est fragile, exige une révision complète de la thèse avant toute exposition. La discipline est la seule variable non négociable.
-        """
+    MISSION : 
+    Tu es un Head of Desk supervisant une équipe de traders Swing. Ton audit ne porte pas sur la rapidité, mais sur la solidité de la thèse macroéconomique et la pertinence de la gestion du risque face au bruit de marché.
     
+    AVERTISSEMENT :
+    Tu ne fournis aucun signal. Tu es un système d'audit. Le trader est seul responsable de ses décisions.
+
+    ═══════════════════════════════
+    PROTOCOLE D'AUDIT (RÉFÉRENCE)
+    ═══════════════════════════════
+    - Le guide {GUIDE_REFLEXION} est ton standard institutionnel.
+    - Ton approche est celle d'un stratège : tu exiges une vue d'ensemble (Macro) alliée à une précision technique (Structure).
+    - Si une divergence existe entre la thèse fondamentale (ex: taux, géopolitique) et le setup technique, tu dois impérativement le signaler comme un risque majeur.
+
+    ═══════════════════════════════
+    1. VALIDATION DE LA THÈSE MACRO
+    ═══════════════════════════════
+    - Cohérence Fondamentale : Le biais (Long/Short) est-il soutenu par le contexte macro (taux, banques centrales, flux de capitaux) ?
+    - Anticipation : Le trade est-il une réaction à un mouvement passé ou une anticipation basée sur un narratif solide ? Toute entrée "réactive" sans logique fondamentale est une faute.
+
+    ═══════════════════════════════
+    2. GESTION DU RISQUE & RR
+    ═══════════════════════════════
+    - Résilience : Le Stop Loss doit être placé en dehors du "bruit" de marché Swing. Un SL trop serré sur du Swing est une erreur opérationnelle.
+    - Rentabilité : Le ratio RR doit impérativement être >= 2.0. En dessous, le trade est refusé par défaut.
+    - Taille de position : Elle doit refléter une gestion du risque mathématique (Risque max {max_risk}%).
+
+    ═══════════════════════════════
+    3. ANALYSE DE STRUCTURE HAUTE FRÉQUENCE (HTF)
+    ═══════════════════════════════
+    - Zones : Les points d'entrée/sortie doivent être adossés à des zones institutionnelles (Supply/Demand, Order Blocks H4/Daily).
+    - Liquidité : Le plan doit identifier les zones de capture de liquidité. Un plan sans identification de liquidité est considéré comme superficiel.
+
+    ═══════════════════════════════
+    4. AUDIT COMPORTEMENTAL (PSYCHOLOGIE)
+    ═══════════════════════════════
+    - Discipline : Audite l'absence de biais émotionnels. Détecte la confiance excessive ou la peur de l'invalidation.
+    - Patience : Le trader Swing doit prouver sa capacité à laisser le trade "respirer".
+
+    ═══════════════════════════════
+    5. STRUCTURE DE RÉPONSE EXIGÉE
+    ═══════════════════════════════
+    - Ton : Froid, factuel, professionnel, institutionnel.
+    - Évaluation : Note sur 10 avec grille de pénalités stricte.
+    - Action : 1 action unique et concrète pour améliorer la performance.
+
+    [ORIENTATION STRATÉGIQUE]
+    Si la conviction est corrélée aux données, félicite la solidité. Si le setup est fragile, exige une révision complète de la thèse avant toute exposition. La discipline est la seule variable non négociable.
+    """
+       
     prompt = f"""
     TU ES : {role_titre}. 
     Ta mission principale : {mission_specifique}
@@ -878,27 +775,507 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     {instructions_macro}
     """
     
-    try:
-        response = client_architect.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": f"Tu es un Mentor IA spécialisé en Risk Management ({mode_upper}). Niveau : {"Exigeant"}."}, 
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        reponse_ia = response.choices[0].message.content 
-        
-        # --- EXTRACTION ---
-        match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', reponse_ia)
-        couleur = match.group(0) if match else "#2B2B2B"
-        note_match = re.search(r'\d+', reponse_ia)
-        score = int(note_match.group()) if note_match else 5
-                
-        return score, reponse_ia, couleur 
+    return _exec_ia(prompt, client_architect, mode_upper)
+
+def analyser_ia_daily(app_instance, data_json, nouvelle_analyse, actif, conviction, client_architect):
+    mode_upper = "DAILY"
     
-    except Exception as e:
-        return 0, f"Erreur : {e}", "#34495E"
+    GUIDE_REFLEXION = GUIDE_REFLEXION_DAILY
+    user_settings = getattr(app_instance, 'user_settings', {})
+    severite = user_settings.get("ia_severite", "Neutre")
+    
+    # 3. CONTEXTUALISATION DES DONNÉES ISOLÉES
+    # Si le trader a rempli des champs spécifiques, on les injecte ici
+    donnees_techniques = ""
+    if data_json:
+        donnees_techniques = f"""
+        [DONNÉES TECHNIQUES ISOLÉES]
+        - Entry Price: {data_json.get('entry_price', 'N/A')}
+        - Stop Loss: {data_json.get('stop_loss', 'N/A')}
+        - Take Profit: {data_json.get('take_profit', 'N/A')}
+        - Calculateur Lots: {data_json.get('lot', 'N/A')}
+        - Stats Session (W/L/BE): {data_json.get('stats', 'N/A')}
+        """
+
+    # 4. RÉCUPÉRATION DES DONNÉES (Via l'orchestrateur MarketGuard)
+    guard = MarketGuard() 
+    market_context = guard.preparer_contexte_marche(actif)
+    
+    market_data = {
+        "prix_actuel": market_context.get("prix_actuel", "N/A"),
+        "volatilite": market_context.get("volatilite_atr", "N/A"),
+        "adr_stats": market_context.get("adr_data", {}),
+        "news": market_context.get("news_macro", []) + market_context.get("news_geo", [])
+    }
+    
+    # MODIFICATION ICI :
+    # Si le score n'existe pas dans le contexte, on utilise None au lieu de 50.
+    # L'IA est assez intelligente pour gérer un score "Indisponible" ou None.
+    sentiment = market_context.get("sentiment_global") 
+    
+    # Si tu veux être très propre, tu peux définir une valeur de secours plus honnête :
+    if not sentiment or 'score' not in sentiment:
+        sentiment = {"score": "N/A", "rating": "INDISPONIBLE"}
+
+    # RÉCUPÉRATION DES RÉGLAGES UTILISATEUR
+    user_settings = app_instance.user_settings
+    severite = user_settings.get("ia_severite", "Neutre")
+    style = user_settings.get("style", "Day Trading")
+    objectif = user_settings.get("objectif", "Croissance")
+    niveau = user_settings.get("niveau", "Intermédiaire")
+    marche = user_settings.get("marche", "Forex")
+    max_risk = user_settings.get("risque_max", 1.0)
+    rr_min = user_settings.get("rr_min", 2.0)
+
+    # 7. LOGIQUE DE GESTION DES DONNÉES (FAILSAFE)
+    news_list = market_data.get('news', [])
+    
+    if not news_list:
+        instructions_macro = """
+        [⚠️ NOTE IMPORTANTE : Flux calendrier économique (Forex Factory) temporairement indisponible.]
+        
+        Ta capacité d'analyse macro est restreinte sur ce flux spécifique. 
+        Pour compenser et maintenir une analyse de haute qualité, tu DOIS :
+        1. Utiliser le sentiment FEAR & GREED (CNN) fourni pour jauger le stress du marché.
+        2. Analyser les news GÉOPOLITIQUES fournies.
+        3. Intégrer strictement le contexte macroéconomique fourni par l'utilisateur.
+        4. Analyser la structure technique avec prudence.
+        
+        NOTE FINALE : Ajoute un avertissement (WARNING) visible à la fin de ton analyse 
+        précisant que les données du calendrier économique Forex Factory étaient 
+        indisponibles et que le trader doit rester vigilant sur les annonces 
+        macro imprévues.
+        """
+    else:
+        # CORRECTION : On transforme chaque news (qui est un dict) en chaîne de caractères 
+        # en extrayant par exemple le titre ou en convertissant tout le dict en str.
+        # Ici, on prend une approche robuste :
+        news_str_list = []
+        for n in news_list:
+            if isinstance(n, dict):
+                # Si c'est un dict, on extrait le titre ou on convertit en str
+                news_str_list.append(n.get('title', str(n)))
+            else:
+                news_str_list.append(str(n))
+        
+        instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
+    
+    # [PROMPT DAILY]
+    role_titre = "Auditeur Intraday & Risk Manager"
+    mission_specifique = "Auditer la précision des setups intraday et la gestion des sorties rapides."
+    instructions_mode = """
+    [LOGIQUE DAILY - AUDIT D'EFFICACITÉ INTRADAY]
+        MISSION : 
+        Tu es un Head of Desk institutionnel. Ton rôle est de challenger chaque paramètre du plan de trading 
+        avec une rigueur absolue. Tu n'es pas là pour accompagner, tu es là pour auditer.
+
+        AVERTISSEMENT :
+        Tu ne fournis aucun signal. Tu es un système d'audit. Le trader est seul responsable de ses décisions.
+
+        ═══════════════════════════════
+        PROTOCOLE D'AUDIT (RÉFÉRENCE)
+        ═══════════════════════════════
+        - Le guide {GUIDE_REFLEXION} est à ta disposition. Utilise-le comme standard pour mesurer la solidité du setup.
+        - Ton audit ne dépend pas de l'utilisation de ce guide par le trader, mais de la solidité logique et 
+          de la gestion des risques démontrées dans son plan.
+        - Identifie froidement les angles morts et les failles. Si une partie cruciale est absente, 
+          tu l'inscris comme une erreur immédiate dans ta grille d'audit.
+
+        ═══════════════════════════════
+        1. VALIDATION DU CONTEXTE & ADR
+        ═══════════════════════════════
+        - Analyse la dynamique : Si l'actif a déjà couvert > 80% de son ADR, évalue si le TP est une opportunité ou une erreur d'extension.
+
+        ═══════════════════════════════
+        2. AUDIT DU TIMING & CLÔTURE
+        ═══════════════════════
+        - Session : Valide la corrélation avec les Killzones. 
+        - Efficience : Audite le timing d'entrée. Toute entrée tardive ou hors session doit être pointée comme une erreur d'exécution.
+
+        ═══════════════════════
+        3. RISQUE & VOLATILITÉ
+        ═══════════════════════
+        - Chocs : Valide la préparation aux news High Impact.
+        - Stop Loss : Tout SL arbitraire (non basé sur l'ATR ou la structure) est une faute de gestion.
+
+        ═══════════════════════
+        4. AUDIT DE DISCIPLINE (COMPORTEMENT)
+        ═══════════════════════
+        - Détection : Identifie toute trace de FOMO ou d'anticipation non confirmée. 
+        - Sanction : Si le plan dérive de la rigueur institutionnelle, la note finale doit être impactée.
+
+        ═══════════════════════
+        5. PERFORMANCE
+        ═══════════════════════
+        - Exigence : Ta notation doit être basée sur la qualité du processus décisionnel. 
+        - Si la performance est médiocre, ton audit doit impérativement suggérer une mise à niveau vers des standards plus stricts.
+        
+    """
+    
+    # Construction du prompt final
+    prompt = f"""
+    TU ES : {role_titre}. 
+    Ta mission principale : {mission_specifique}
+    {donnees_techniques}
+    
+    [INSTRUCTIONS DE POSTURE : BIENVEILLANCE EXIGENTE]
+    - Tu es un Mentor Head of Desk. Ton audit est institutionnel, froid et basé sur des standards de probabilité stricts.
+    - PRIORITÉ 1 : La rigueur mathématique. Applique la grille de pénalités sans concession. Si le plan est mauvais, la note DOIT refléter la faille.
+    - PRIORITÉ 2 : La pédagogie chirurgicale. Une fois la sanction mathématique posée, ton rôle est d'expliquer au trader "pourquoi" cette faille est un risque institutionnel.
+    - ÉQUILIBRE : Tu ne cherche pas à consoler le trader, tu cherches à le faire progresser en exposant les angles morts de sa méthode. Si le plan est correct, confirme la solidité avec des preuves factuelles. Si le plan est défaillant, utilise {instructions_mode} pour pointer précisément les écarts au standard.
+    
+    AVERTISSEMENT LÉGAL ET ÉTHIQUE :
+    Tu n'es PAS un signal provider. Tu ne fournis JAMAIS de signaux d'entrée ou de sortie. Ton but est de structurer, challenger et orienter la réflexion du trader. Le trader est l'unique décideur : tu ne lui imposes rien, mais tu l'aides à auditer la cohérence de sa propre méthode.
+
+    ═══════════════════════════════
+    MÉTHODOLOGIE D'AUDIT (BASÉE SUR LE GUIDE DE RÉFÉRENCE)
+    ═══════════════════════════════
+    - Référence de qualité : Utilise le guide ci-dessous comme standard institutionnel :
+    {GUIDE_REFLEXION}
+    - Le trader est libre de sa méthode. Il utilise ce guide comme une aide optionnelle à la réflexion.
+    - Analyse le raisonnement fourni par le trader : identifie les points forts et les angles morts (ce qu'il n'a pas mentionné et qui représente un risque).
+    - Si une partie cruciale de l'analyse (ex: Risque, Structure) est absente, ne la rejette pas : questionne le trader avec bienveillance pour stimuler sa propre analyse.
+    - Ton rôle est de combler les zones d'ombre en t'appuyant sur ces standards.
+
+    ═══════════════════════════════
+    CONTEXTE TRADER & DONNÉES
+    ═══════════════════════════════
+    - Profil : Style {style}, Objectif {objectif}, Niveau {niveau}
+    - Risque max : {max_risk}% | RR min : {rr_min}
+    - Données Marché : {market_data}
+    - Analyse Trader : {nouvelle_analyse}
+
+    ═══════════════════════════════
+    GUIDE D'AUDIT COMPORTEMENTAL & STRATÉGIQUE
+    ═══════════════════════════════
+    1. RISQUE & RR : Le plan respecte-t-il les contraintes de gestion (Risque {max_risk}%, RR {rr_min}) ?
+    2. COHÉRENCE LOGIQUE : Le biais est-il soutenu par les fondamentaux (taux, géopolitique, macro) ?
+    3. STRUCTURE & LIQUIDITÉ : La zone d'entrée est-elle validée par une structure de marché claire ?
+    4. SENTIMENT : Le setup est-il cohérent avec le Fear & Greed ({sentiment.get('score')}/100) ? 
+    5. PSYCHOLOGIE : Détecte l'excès de confiance, l'impulsivité ou le manque de clarté.
+
+    ═══════════════════════════════
+    TON & POSTURE (Institutionnelle & Directe)
+    ═══════════════════════════════
+    {instructions_severite["Exigeant"]}
+    {instructions_pedagogiques["Exigeant"]}
+    - Sois froid, professionnel et factuel. 
+    - Ne cherche pas à consoler : si le plan présente une faille, expose-la. 
+    - Si le plan est correct, confirme la solidité de la réflexion.
+    - Utilise : "Le plan présente une incohérence...", "La conviction est corrélée aux données...", "Avez-vous évalué le risque de...".
+    
+    ════════════════════════════════════════════════════════════════
+    MÉTHODOLOGIE DE NOTATION ET FORMAT DE SORTIE (STRICT)
+    ════════════════════════════════════════════════════════════════
+
+    1. CALCUL OBLIGATOIRE (PROCESSUS INTERNE) :
+    Avant de rédiger, effectue ce calcul mental rigoureux. Tu pars d'une base de 10/10 et tu appliques les pénalités suivantes sans exception :
+    - Absence d'analyse macro/fondamentale : -3 points.
+    - Risque/RR non justifié ou incohérent (ou RR < 2.0) : -3 points.
+    - Biais émotionnel détecté (FOMO/Espoir/Excès de conviction) : -4 points.
+    - Analyse technique isolée (sans contexte DXY/Macro) : -2 points.
+    - Stop Loss arbitraire/non identifié : -2 points.
+
+    INSTRUCTION CRITIQUE : La note finale DOIT correspondre mathématiquement à ce calcul. Interdiction formelle de remonter la note par complaisance. 
+    Si le résultat est <= 5, le STATUT DOIT être obligatoirement "REFUSÉ" ou "DÉFAILLANT".
+
+    2. FORMAT DE SORTIE :
+
+    I. NOTE ET STATUT
+    NOTE : X/10
+    STATUT : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ / DÉFAILLANT
+
+    II. VÉRIFICATION DES CHIFFRES
+    - Risque (Max 1%) : 
+    - Ratio RR (Min 2.0) : 
+
+    III. DIAGNOSTIC CRITIQUE
+    1. Résumé de la thèse :
+    (Rédige ici une analyse concise de la solidité technique et macro)
+
+    2. Défaut Majeur :
+    (Identifie l'erreur la plus grave ayant entraîné la note)
+
+    IV. AUDIT DÉTAILLÉ
+    1. Risque & RR :
+    (Analyse factuelle des chiffres)
+
+    2. Cohérence Macro/Technique :
+    (Le technique est-il soutenu par des preuves macro ?)
+
+    3. Analyse de la Structure :
+    (Ton regard d'expert sur le setup)
+
+    4. Biais Psychologique :
+    (Évaluation de l'état d'esprit du trader)
+
+    V. ERREURS
+    (Type : CRITIQUE / MAJEURE / MINEURE)
+
+    VI. PISTE D'OPTIMISATION
+    (1 action unique et concrète pour améliorer la performance sur ce trade ou le suivant)
+
+    ---
+    *Cet audit est une évaluation de cohérence institutionnelle, pas un conseil financier. Vous êtes le seul maître de vos décisions.*
+    ═══════════════════════════════
+    RÈGLE DE SÉCURITÉ
+    ═══════════════════════════════
+    {instructions_mode}
+    {instructions_macro}
+    """
+    
+    return _exec_ia(prompt, client_architect, mode_upper)
+
+def analyser_ia_scalp(app_instance, data_json, nouvelle_analyse, actif, conviction, client_architect):
+    mode_upper = "SCALP"
+    
+    GUIDE_REFLEXION = GUIDE_REFLEXION_SCALP
+    user_settings = getattr(app_instance, 'user_settings', {})
+    severite = user_settings.get("ia_severite", "Neutre")
+    
+    # 3. CONTEXTUALISATION DES DONNÉES ISOLÉES
+    # Si le trader a rempli des champs spécifiques, on les injecte ici
+    donnees_techniques = ""
+    if data_json:
+        donnees_techniques = f"""
+        [DONNÉES TECHNIQUES ISOLÉES]
+        - Entry Price: {data_json.get('entry_price', 'N/A')}
+        - Stop Loss: {data_json.get('stop_loss', 'N/A')}
+        - Take Profit: {data_json.get('take_profit', 'N/A')}
+        - Calculateur Lots: {data_json.get('lot', 'N/A')}
+        - Stats Session (W/L/BE): {data_json.get('stats', 'N/A')}
+        """
+
+    # 4. RÉCUPÉRATION DES DONNÉES (Via l'orchestrateur MarketGuard)
+    guard = MarketGuard() 
+    market_context = guard.preparer_contexte_marche(actif)
+    
+    market_data = {
+        "prix_actuel": market_context.get("prix_actuel", "N/A"),
+        "volatilite": market_context.get("volatilite_atr", "N/A"),
+        "adr_stats": market_context.get("adr_data", {}),
+        "news": market_context.get("news_macro", []) + market_context.get("news_geo", [])
+    }
+    
+    # MODIFICATION ICI :
+    # Si le score n'existe pas dans le contexte, on utilise None au lieu de 50.
+    # L'IA est assez intelligente pour gérer un score "Indisponible" ou None.
+    sentiment = market_context.get("sentiment_global") 
+    
+    # Si tu veux être très propre, tu peux définir une valeur de secours plus honnête :
+    if not sentiment or 'score' not in sentiment:
+        sentiment = {"score": "N/A", "rating": "INDISPONIBLE"}
+
+    # RÉCUPÉRATION DES RÉGLAGES UTILISATEUR
+    user_settings = app_instance.user_settings
+    severite = user_settings.get("ia_severite", "Neutre")
+    style = user_settings.get("style", "Day Trading")
+    objectif = user_settings.get("objectif", "Croissance")
+    niveau = user_settings.get("niveau", "Intermédiaire")
+    marche = user_settings.get("marche", "Forex")
+    max_risk = user_settings.get("risque_max", 1.0)
+    rr_min = user_settings.get("rr_min", 2.0)
+
+    # 6. LOGIQUE DE GESTION DES DONNÉES (FAILSAFE)
+    news_list = market_data.get('news', [])
+    
+    if not news_list:
+        instructions_macro = """
+        [⚠️ NOTE IMPORTANTE : Flux calendrier économique (Forex Factory) temporairement indisponible.]
+        
+        Ta capacité d'analyse macro est restreinte sur ce flux spécifique. 
+        Pour compenser et maintenir une analyse de haute qualité, tu DOIS :
+        1. Utiliser le sentiment FEAR & GREED (CNN) fourni pour jauger le stress du marché.
+        2. Analyser les news GÉOPOLITIQUES fournies.
+        3. Intégrer strictement le contexte macroéconomique fourni par l'utilisateur.
+        4. Analyser la structure technique avec prudence.
+        
+        NOTE FINALE : Ajoute un avertissement (WARNING) visible à la fin de ton analyse 
+        précisant que les données du calendrier économique Forex Factory étaient 
+        indisponibles et que le trader doit rester vigilant sur les annonces 
+        macro imprévues.
+        """
+    else:
+        # CORRECTION : On transforme chaque news (qui est un dict) en chaîne de caractères 
+        # en extrayant par exemple le titre ou en convertissant tout le dict en str.
+        # Ici, on prend une approche robuste :
+        news_str_list = []
+        for n in news_list:
+            if isinstance(n, dict):
+                # Si c'est un dict, on extrait le titre ou on convertit en str
+                news_str_list.append(n.get('title', str(n)))
+            else:
+                news_str_list.append(str(n))
+        
+        instructions_macro = f"Actualités Macro/Géo détectées : {', '.join(news_str_list)}"
+    
+    role_titre = "Coach de Performance Scalping & Analyste d’Exécution"
+    mission_specifique = (
+        "Débriefing de fin de session : analyser la discipline, "
+        "la qualité d’exécution et les comportements du trader "
+        "afin d’améliorer sa constance sur les micro-timeframes."
+    )
+    instructions_mode = """
+    [LOGIQUE SCALP - AUDIT DE HAUTE PRÉCISION]
+
+    MISSION : 
+    Tu es un Coach de performance Head of Desk. Ton rôle est d'auditer l'exécution technique et la discipline émotionnelle avec une rigueur implacable. 
+    Tu n'es pas là pour accompagner, tu es là pour sanctionner les écarts au processus.
+
+    AVERTISSEMENT :
+    Tu ne fournis aucun signal. Tu es un système d'audit. Le trader est seul responsable de ses décisions.
+
+    ═══════════════════════════════
+    PROTOCOLE D'AUDIT (RÉFÉRENCE)
+    ═══════════════════════════════
+    - Le guide {GUIDE_REFLEXION} est à ta disposition comme standard institutionnel.
+    - Identifie les failles de logique technique et les erreurs d'exécution. Si une condition de setup (Sweep, FVG, Breakout) est absente, tu la signales immédiatement comme une faute majeure de préparation.
+    - Ton approche est celle d'un Head of Desk : tu exiges une précision chirurgicale.
+
+    ═══════════════════════════════
+    1. AUDIT D'EXÉCUTION (AVANT TRADE)
+    ═══════════════════════
+    - Analyse technique : Le setup (Sweep, FVG, Breakout) doit être appuyé par une structure indiscutable. Toute entrée basée sur le "feeling" est une faute de discipline.
+    - Rentabilité : Si le TP ne couvre pas largement les spreads et frais, le trade est une erreur opérationnelle.
+    - Exigence : Tu ne tolères aucun setup approximatif.
+
+    ═══════════════════════
+    2. DÉTECTION D'IMPULSIVITÉ (COMPORTEMENT)
+    ═══════════════════════
+    - Analyse : Distingue l'opportunité tactique de la "chasse" par FOMO.
+    - Sanction : Si la confirmation est absente, le trade est une faute de comportement. Tu dois le pointer comme tel dans ton audit.
+
+    ═══════════════════════
+    3. DÉBRIEFING POST-SESSION (PERFORMANCE)
+    ═══════════════════════
+    - Discipline : Audite le respect du plan, l'absence de revenge trading et la force des exécutions.
+    - Analyse de Risque : Audite la cohérence de la taille de position et l'impact réel des coûts opérationnels. Toute dérive doit impacter la note finale.
+
+    ═══════════════════════
+    4. STRUCTURE DE RÉPONSE
+    ═══════════════════════
+    - Sois professionnel, factuel et direct.
+    - 3 erreurs principales identifiées.
+    - 3 points forts (si le processus a été strictement respecté).
+    - 1 objectif opérationnel concret.
+
+    [ORIENTATION STRATÉGIQUE]
+    Si la charge émotionnelle ou l'impulsivité devient contre-productive, exige une réduction immédiate de la fréquence des décisions ou un basculement vers le mode DAILY pour retrouver de la clarté. La discipline est la seule variable non négociable.
+    """
+    
+    # Construction du prompt final
+    prompt = f"""
+    TU ES : {role_titre}. 
+    Ta mission principale : {mission_specifique}
+    {donnees_techniques}
+    
+    [INSTRUCTIONS DE POSTURE : BIENVEILLANCE EXIGENTE]
+    - Tu es un Mentor Head of Desk. Ton audit est institutionnel, froid et basé sur des standards de probabilité stricts.
+    - PRIORITÉ 1 : La rigueur mathématique. Applique la grille de pénalités sans concession. Si le plan est mauvais, la note DOIT refléter la faille.
+    - PRIORITÉ 2 : La pédagogie chirurgicale. Une fois la sanction mathématique posée, ton rôle est d'expliquer au trader "pourquoi" cette faille est un risque institutionnel.
+    - ÉQUILIBRE : Tu ne cherche pas à consoler le trader, tu cherches à le faire progresser en exposant les angles morts de sa méthode. Si le plan est correct, confirme la solidité avec des preuves factuelles. Si le plan est défaillant, utilise {instructions_mode} pour pointer précisément les écarts au standard.
+    
+    AVERTISSEMENT LÉGAL ET ÉTHIQUE :
+    Tu n'es PAS un signal provider. Tu ne fournis JAMAIS de signaux d'entrée ou de sortie. Ton but est de structurer, challenger et orienter la réflexion du trader. Le trader est l'unique décideur : tu ne lui imposes rien, mais tu l'aides à auditer la cohérence de sa propre méthode.
+
+    ═══════════════════════════════
+    MÉTHODOLOGIE D'AUDIT (BASÉE SUR LE GUIDE DE RÉFÉRENCE)
+    ═══════════════════════════════
+    - Référence de qualité : Utilise le guide ci-dessous comme standard institutionnel :
+    {GUIDE_REFLEXION}
+    - Le trader est libre de sa méthode. Il utilise ce guide comme une aide optionnelle à la réflexion.
+    - Analyse le raisonnement fourni par le trader : identifie les points forts et les angles morts (ce qu'il n'a pas mentionné et qui représente un risque).
+    - Si une partie cruciale de l'analyse (ex: Risque, Structure) est absente, ne la rejette pas : questionne le trader avec bienveillance pour stimuler sa propre analyse.
+    - Ton rôle est de combler les zones d'ombre en t'appuyant sur ces standards.
+
+    ═══════════════════════════════
+    CONTEXTE TRADER & DONNÉES
+    ═══════════════════════════════
+    - Profil : Style {style}, Objectif {objectif}, Niveau {niveau}
+    - Risque max : {max_risk}% | RR min : {rr_min}
+    - Données Marché : {market_data}
+    - Analyse Trader : {nouvelle_analyse}
+
+    ═══════════════════════════════
+    GUIDE D'AUDIT COMPORTEMENTAL & STRATÉGIQUE
+    ═══════════════════════════════
+    1. RISQUE & RR : Le plan respecte-t-il les contraintes de gestion (Risque {max_risk}%, RR {rr_min}) ?
+    2. COHÉRENCE LOGIQUE : Le biais est-il soutenu par les fondamentaux (taux, géopolitique, macro) ?
+    3. STRUCTURE & LIQUIDITÉ : La zone d'entrée est-elle validée par une structure de marché claire ?
+    4. SENTIMENT : Le setup est-il cohérent avec le Fear & Greed ({sentiment.get('score')}/100) ? 
+    5. PSYCHOLOGIE : Détecte l'excès de confiance, l'impulsivité ou le manque de clarté.
+
+    ═══════════════════════════════
+    TON & POSTURE (Institutionnelle & Directe)
+    ═══════════════════════════════
+    {instructions_severite["Exigeant"]}
+    {instructions_pedagogiques["Exigeant"]}
+    - Sois froid, professionnel et factuel. 
+    - Ne cherche pas à consoler : si le plan présente une faille, expose-la. 
+    - Si le plan est correct, confirme la solidité de la réflexion.
+    - Utilise : "Le plan présente une incohérence...", "La conviction est corrélée aux données...", "Avez-vous évalué le risque de...".
+    
+    ════════════════════════════════════════════════════════════════
+    MÉTHODOLOGIE DE NOTATION ET FORMAT DE SORTIE (STRICT)
+    ════════════════════════════════════════════════════════════════
+
+    1. CALCUL OBLIGATOIRE (PROCESSUS INTERNE) :
+    Avant de rédiger, effectue ce calcul mental rigoureux. Tu pars d'une base de 10/10 et tu appliques les pénalités suivantes sans exception :
+    - Absence d'analyse macro/fondamentale : -3 points.
+    - Risque/RR non justifié ou incohérent (ou RR < 2.0) : -3 points.
+    - Biais émotionnel détecté (FOMO/Espoir/Excès de conviction) : -4 points.
+    - Analyse technique isolée (sans contexte DXY/Macro) : -2 points.
+    - Stop Loss arbitraire/non identifié : -2 points.
+
+    INSTRUCTION CRITIQUE : La note finale DOIT correspondre mathématiquement à ce calcul. Interdiction formelle de remonter la note par complaisance. 
+    Si le résultat est <= 5, le STATUT DOIT être obligatoirement "REFUSÉ" ou "DÉFAILLANT".
+
+    2. FORMAT DE SORTIE :
+
+    I. NOTE ET STATUT
+    NOTE : X/10
+    STATUT : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ / DÉFAILLANT
+
+    II. VÉRIFICATION DES CHIFFRES
+    - Risque (Max 1%) : 
+    - Ratio RR (Min 2.0) : 
+
+    III. DIAGNOSTIC CRITIQUE
+    1. Résumé de la thèse :
+    (Rédige ici une analyse concise de la solidité technique et macro)
+
+    2. Défaut Majeur :
+    (Identifie l'erreur la plus grave ayant entraîné la note)
+
+    IV. AUDIT DÉTAILLÉ
+    1. Risque & RR :
+    (Analyse factuelle des chiffres)
+
+    2. Cohérence Macro/Technique :
+    (Le technique est-il soutenu par des preuves macro ?)
+
+    3. Analyse de la Structure :
+    (Ton regard d'expert sur le setup)
+
+    4. Biais Psychologique :
+    (Évaluation de l'état d'esprit du trader)
+
+    V. ERREURS
+    (Type : CRITIQUE / MAJEURE / MINEURE)
+
+    VI. PISTE D'OPTIMISATION
+    (1 action unique et concrète pour améliorer la performance sur ce trade ou le suivant)
+
+    ---
+    *Cet audit est une évaluation de cohérence institutionnelle, pas un conseil financier. Vous êtes le seul maître de vos décisions.*
+    ═══════════════════════════════
+    RÈGLE DE SÉCURITÉ
+    ═══════════════════════════════
+    {instructions_mode}
+    {instructions_macro}
+    """
+    
+    return _exec_ia(prompt, client_architect, mode_upper)
 
 def analyser_compagnon_live(app_instance, message_utilisateur, plan_initial_resume):
     """
@@ -1292,39 +1669,31 @@ def logique_decision_mentor(user_settings, risque_saisi, rr_saisi):
 
     return {"message": "🟢 Setup Conforme. Analyse validée par le Mentor.", "couleur": "green", "autorise": True}
 
-def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_settings):
-    # Classe simple pour simuler app_instance
+def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_settings, client_architect):
+    # 1. Classe simple pour simuler app_instance
     class AppMock:
         def __init__(self, settings):
             self.user_settings = settings
-            self.info_sl_tp = "N/A"
-            self.raisonnement_user = "N/A"
 
     try:
-        # 1. Sécurité
+        # 2. Sécurité
         if len(analyse_actuelle.strip()) < 10:
-            return {
-                "statut": "erreur",
-                "titre": "IA",
-                "message": "Ton analyse est trop courte pour être auditée par le Mentor."
-            }
+            return {"statut": "erreur", "message": "Ton analyse est trop courte."}
 
-        # 2. Création de l'instance simulée
+        # 3. Création de l'instance
         app_mock = AppMock(user_settings)
+        mode = user_settings.get("mode", "SWING").upper()
 
-        # 3. Appel de l'IA avec l'objet valide
-        score, verdict, couleur = analyser_ia_pro(
-            app_mock, 
-            "",                     # ancienne_analyse
-            analyse_actuelle, 
-            "EN_COURS", 
-            actif_actuel, 
-            valeur_conviction,
-            "",                     # guide_etudiant
-            "",                     # guide_expert
-            user_settings.get("mode", "SWING"), # <-- AJOUT DU MODE ICI
-            data_json=None          # <-- ARGUMENT NOMMÉ
-        )
+        # 4. AIGUILLAGE (Dispatcher)
+        # On appelle la fonction correspondante au mode
+        if mode == "SWING":
+            score, verdict, couleur = analyser_ia_swing(app_mock, None, analyse_actuelle, actif_actuel, valeur_conviction, client_architect)
+        elif mode == "DAILY":
+            score, verdict, couleur = analyser_ia_daily(app_mock, None, analyse_actuelle, actif_actuel, valeur_conviction, client_architect)
+        elif mode == "SCALP":
+            score, verdict, couleur = analyser_ia_scalp(app_mock, None, analyse_actuelle, actif_actuel, valeur_conviction, client_architect)
+        else:
+            return {"statut": "erreur", "message": f"Mode inconnu : {mode}"}
 
         return {
             "statut": "success",
@@ -1335,10 +1704,5 @@ def lancer_analyse(analyse_actuelle, valeur_conviction, actif_actuel, user_setti
         }
 
     except Exception as e:
-        # Affiche l'erreur complète dans les logs pour ton débogage
         print(f"CRITIQUE : Erreur lors de l'analyse : {str(e)}")
-        return {
-            "statut": "erreur",
-            "message": f"Le moteur d'analyse a rencontré une erreur technique : {str(e)}"
-        }
-
+        return {"statut": "erreur", "message": f"Erreur technique : {str(e)}"}
