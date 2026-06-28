@@ -706,3 +706,20 @@ scheduler.start()
 database.initialiser_config()
 database.init_db()
 database.migrate_db()
+
+# --- NETTOYAGE CRITIQUE DE LA RAM ---
+import gc
+import os
+import psutil
+
+def purge_ram():
+    # 1. Force le ramasse-miettes à libérer les objets temporaires du boot
+    gc.collect()
+    
+    # 2. Vérification du gain (Log pour Render)
+    process = psutil.Process(os.getpid())
+    ram_usage = process.memory_info().rss / 1024 / 1024
+    print(f"--- [SYSTEM] RAM purgée après démarrage : {ram_usage:.2f} MB ---")
+
+# Exécution de la purge juste avant que Uvicorn ne soit totalement "chaud"
+purge_ram()
