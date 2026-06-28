@@ -951,36 +951,52 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     1. CALCUL OBLIGATOIRE (PROCESSUS INTERNE) :
     Avant de rédiger, effectue ce calcul mental rigoureux. Tu pars d'une base de 10/10 et tu appliques les pénalités suivantes sans exception :
     - Absence d'analyse macro/fondamentale : -3 points.
-    - Risque/RR non justifié ou incohérent : -3 points.
-    - Biais émotionnel détecté (FOMO/Espoir) : -4 points.
-    - Analyse technique isolée (sans contexte) : -2 points.
+    - Risque/RR non justifié ou incohérent (ou RR < 2.0) : -3 points.
+    - Biais émotionnel détecté (FOMO/Espoir/Excès de conviction) : -4 points.
+    - Analyse technique isolée (sans contexte DXY/Macro) : -2 points.
     - Stop Loss arbitraire/non identifié : -2 points.
 
-    INSTRUCTION CRITIQUE : La note finale doit correspondre mathématiquement à ce calcul. Interdiction formelle de remonter la note par complaisance. 
+    INSTRUCTION CRITIQUE : La note finale DOIT correspondre mathématiquement à ce calcul. Interdiction formelle de remonter la note par complaisance. 
     Si le résultat est <= 5, le STATUT DOIT être obligatoirement "REFUSÉ" ou "DÉFAILLANT".
 
     2. FORMAT DE SORTIE :
-    [NOTE] : X/10 (Résultat du calcul strict ci-dessus)
-    [STATUT] : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ / DÉFAILLANT
 
-    [DIAGNOSTIC] :
-    - VALIDATION DE STRUCTURE : Prêt pour surveillance active sur les niveaux identifiés.
-    - AJUSTEMENT REQUIS : Revoir la gestion du risque ou la structure avant exposition.
-    - REFUSÉ / DÉFAILLANT : Plan non conforme aux standards de probabilité de Trade Mind. (Explique pourquoi).
+    I. NOTE ET STATUT
+    NOTE : X/10
+    STATUT : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ / DÉFAILLANT
 
-    [AUDIT] :
-    - Risque & RR : 
-    - Cohérence Macro/Technique : 
-    - Analyse de la Structure : 
-    - Biais Psychologique : 
+    II. VÉRIFICATION DES CHIFFRES
+    - Risque (Max 1%) : 
+    - Ratio RR (Min 2.0) : 
 
-    [ERREURS] : (Type : CRITIQUE / MAJEURE / MINEURE)
+    III. DIAGNOSTIC CRITIQUE
+    1. Résumé de la thèse :
+    (Rédige ici une analyse concise de la solidité technique et macro)
 
-    [PISTE D'OPTIMISATION] :
-    1 action unique et concrète pour améliorer la performance sur ce trade ou le suivant.
+    2. Défaut Majeur :
+    (Identifie l'erreur la plus grave ayant entraîné la note)
+
+    IV. AUDIT DÉTAILLÉ
+    1. Risque & RR :
+    (Analyse factuelle des chiffres)
+
+    2. Cohérence Macro/Technique :
+    (Le technique est-il soutenu par des preuves macro ?)
+
+    3. Analyse de la Structure :
+    (Ton regard d'expert sur le setup)
+
+    4. Biais Psychologique :
+    (Évaluation de l'état d'esprit du trader)
+
+    V. ERREURS
+    (Type : CRITIQUE / MAJEURE / MINEURE)
+
+    VI. PISTE D'OPTIMISATION
+    (1 action unique et concrète pour améliorer la performance sur ce trade ou le suivant)
 
     ---
-    *Cette analyse est un audit de cohérence institutionnel, pas un conseil financier. Analysez, testez et forgez votre propre intelligence. Vous êtes le seul maître de vos décisions.*
+    *Cet audit est une évaluation de cohérence institutionnelle, pas un conseil financier. Vous êtes le seul maître de vos décisions.*
     ═══════════════════════════════
     RÈGLE DE SÉCURITÉ
     ═══════════════════════════════
