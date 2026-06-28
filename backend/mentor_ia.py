@@ -560,8 +560,18 @@ def analyser_ia_swing(app_instance,  nouvelle_analyse, actif, data_json=None, cl
     # L'IA est assez intelligente pour gérer un score "Indisponible" ou None.
     sentiment = market_context.get("sentiment_global") 
     
-    # Si tu veux être très propre, tu peux définir une valeur de secours plus honnête :
-    if not sentiment or 'score' not in sentiment:
+    sentiment = market_context.get("sentiment_global") 
+    
+    # On sécurise pour que 'sentiment' soit toujours un dictionnaire 
+    # et n'écrase jamais une valeur valide avec une erreur.
+    if isinstance(sentiment, dict) and 'score' in sentiment:
+        # C'est déjà un dictionnaire valide, on ne touche à rien
+        pass
+    elif isinstance(sentiment, int):
+        # Si c'est un int, on le transforme proprement
+        sentiment = {"score": sentiment, "rating": "ANALYSE_NUMERIQUE"}
+    else:
+        # Si c'est autre chose (str, None, etc.), on applique la valeur de secours
         sentiment = {"score": "N/A", "rating": "INDISPONIBLE"}
 
     # RÉCUPÉRATION DES RÉGLAGES UTILISATEUR

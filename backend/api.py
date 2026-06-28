@@ -15,6 +15,7 @@ import tools_stats
 from mentor_ia import MarketGuard
 
 from traceback import format_exc # Ajoute ceci en haut de ton fichier
+from openai import OpenAI
 
 
 
@@ -230,8 +231,11 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
 
             score, verdict, couleur = mentor_ia.analyser_ia_swing(
-                app_mock, "", data.analyse, data.statut, data.actif, 
-                data.conviction, "", "", "SWING"
+            app_mock, 
+            data.analyse,    # nouvelle_analyse
+            data.actif,      # actif
+            data_json=data.model_dump(), # On passe l'objet complet au lieu de champs isolés
+            client_architect = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # Votre instance OpenAI
             )
             feedback_ia = verdict
         except Exception as ie:
@@ -313,15 +317,17 @@ async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_
             app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
 
             # Utilisation de l'IA pour auditer le Daily
-            score, verdict, couleur = mentor_ia.analyser_ia_daily(
-                app_mock, "", data.analyse, data.statut, data.actif, 
-                data.conviction, "", "", "DAILY"
+            score, verdict, couleur = mentor_ia.analyser_ia_swing(
+            app_mock, 
+            data.analyse,    # nouvelle_analyse
+            data.actif,      # actif
+            data_json=data.model_dump(), # On passe l'objet complet au lieu de champs isolés
+            client_architect = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # Votre instance OpenAI
             )
             feedback_ia = verdict
         except Exception as ie:
-            logging.error(f"⚠️ Erreur moteur IA (Daily) : {ie}")
+            logging.error(f"⚠️ Erreur moteur IA : {ie}")
             feedback_ia = f"Erreur de génération : {str(ie)}"
-
         # 3. FUSION DU FEEDBACK
         feedback_final = f"{alerte_news}[ANALYSE IA — DAILY]\n{feedback_ia}"
 
