@@ -15,6 +15,7 @@ import tools_stats
 from mentor_ia import MarketGuard
 
 from traceback import format_exc # Ajoute ceci en haut de ton fichier
+import os
 from openai import OpenAI
 
 
