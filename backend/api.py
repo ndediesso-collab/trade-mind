@@ -235,7 +235,7 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             data.analyse,    # nouvelle_analyse
             data.actif,      # actif
             data_json=data.model_dump(), # On passe l'objet complet au lieu de champs isolés
-            client_architect = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # Votre instance OpenAI
+            
             )
             feedback_ia = verdict
         except Exception as ie:
@@ -322,7 +322,6 @@ async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_
             data.analyse,    # nouvelle_analyse
             data.actif,      # actif
             data_json=data.model_dump(), # On passe l'objet complet au lieu de champs isolés
-            client_architect = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # Votre instance OpenAI
             )
             feedback_ia = verdict
         except Exception as ie:
