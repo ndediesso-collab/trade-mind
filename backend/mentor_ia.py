@@ -944,26 +944,29 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     - Si le plan est correct, confirme la solidité de la réflexion.
     - Utilise : "Le plan présente une incohérence...", "La conviction est corrélée aux données...", "Avez-vous évalué le risque de...".
     
-    ═══════════════════════════════
-    GRILLE DE NOTATION (STRICTE)
-    ═══════════════════════════════
-    Tu pars d'une note de 10/10. Tu DOIS appliquer des pénalités strictes :
+   ════════════════════════════════════════════════════════════════
+    MÉTHODOLOGIE DE NOTATION ET FORMAT DE SORTIE (STRICT)
+    ════════════════════════════════════════════════════════════════
+
+    1. CALCUL OBLIGATOIRE (PROCESSUS INTERNE) :
+    Avant de rédiger, effectue ce calcul mental rigoureux. Tu pars d'une base de 10/10 et tu appliques les pénalités suivantes sans exception :
     - Absence d'analyse macro/fondamentale : -3 points.
     - Risque/RR non justifié ou incohérent : -3 points.
     - Biais émotionnel détecté (FOMO/Espoir) : -4 points.
-    - Analyse technique basée sur des indicateurs sans contexte : -2 points.
-    - Absence d'identification des risques (Stop Loss mal placé/arbitraire) : -2 points.
+    - Analyse technique isolée (sans contexte) : -2 points.
+    - Stop Loss arbitraire/non identifié : -2 points.
 
-    Tu NE DOIS PAS être bienveillant sur la note. Si une analyse est incomplète, la note DOIT refléter cette faiblesse (ex: si l'analyse est technique mais ignore totalement le contexte macro, la note ne peut pas dépasser 5/10).
-    ═══════════════════════════════
-    FORMAT DE SORTIE (STRICT)
-    ═══════════════════════════════
-    [NOTE] : X/10 (Qualité de la réflexion)
-    [STATUT] : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ
+    INSTRUCTION CRITIQUE : La note finale doit correspondre mathématiquement à ce calcul. Interdiction formelle de remonter la note par complaisance. 
+    Si le résultat est <= 5, le STATUT DOIT être obligatoirement "REFUSÉ" ou "DÉFAILLANT".
+
+    2. FORMAT DE SORTIE :
+    [NOTE] : X/10 (Résultat du calcul strict ci-dessus)
+    [STATUT] : VALIDÉ / CONSOLIDATION REQUISE / REFUSÉ / DÉFAILLANT
+
     [DIAGNOSTIC] :
-    - VALIDATION DE STRUCTURE : Prêt pour une surveillance active sur les niveaux identifiés.
-    - AJUSTEMENT REQUIS : Revoir la gestion du risque ou la structure avant toute exposition.
-    - REFUSÉ : Plan non conforme aux standards de probabilité de Trade Mind.
+    - VALIDATION DE STRUCTURE : Prêt pour surveillance active sur les niveaux identifiés.
+    - AJUSTEMENT REQUIS : Revoir la gestion du risque ou la structure avant exposition.
+    - REFUSÉ / DÉFAILLANT : Plan non conforme aux standards de probabilité de Trade Mind. (Explique pourquoi).
 
     [AUDIT] :
     - Risque & RR : 
@@ -977,8 +980,7 @@ def analyser_ia_pro(app_instance, ancienne_analyse, nouvelle_analyse, statut_ana
     1 action unique et concrète pour améliorer la performance sur ce trade ou le suivant.
 
     ---
-    *Cette analyse est un audit de cohérence, pas un conseil financier. Analysez, testez et forgez votre propre intelligence. Vous êtes le seul maître de vos décisions.*
-
+    *Cette analyse est un audit de cohérence institutionnel, pas un conseil financier. Analysez, testez et forgez votre propre intelligence. Vous êtes le seul maître de vos décisions.*
     ═══════════════════════════════
     RÈGLE DE SÉCURITÉ
     ═══════════════════════════════
