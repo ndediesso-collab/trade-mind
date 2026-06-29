@@ -284,7 +284,13 @@ async def route_analyse_swing(data: TradeRequest, token: str = Depends(verifier_
             logging.error(f"⚠️ Erreur moteur IA : {ie}")
             # Si l'IA échoue, on continue MAIS on s'assure que feedback_ia est défini
             feedback_ia = "Analyse indisponible."
-    
+    finally:
+        # NETTOYAGE SYSTÉMATIQUE
+        del shared_guard
+        del bridge
+        del app_mock
+        # Appel de ta fonction de nettoyage
+        purge_ram()
 
 @app.post("/analyse/daily")
 async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
@@ -370,6 +376,13 @@ async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_
     except Exception as e:
         logging.error(f"❌ Erreur critique route_analyse_daily : {e}")
         return {"feedback": f"Erreur système : {str(e)}", "engine_status": "ERROR"}
+    finally:
+        # NETTOYAGE SYSTÉMATIQUE
+        del shared_guard
+        del bridge
+        del app_mock
+        # Appel de ta fonction de nettoyage
+        purge_ram()
 
 @app.post("/analyse/daily/cloture")
 async def route_cloture_daily(request: ClotureRequest, token: str = Depends(verifier_session_terminal)):
@@ -402,6 +415,7 @@ async def route_cloture_daily(request: ClotureRequest, token: str = Depends(veri
             "feedback": feedback,
             "engine_status": "SAFE" if not is_locked else "WARNING"
         }
+    #NB: Pensez à ajouter un pugeur de RAM dans cette route.
     
     except Exception as e:
         logging.error(f"❌ Erreur critique route_cloture_daily : {format_exc()}")
@@ -409,6 +423,7 @@ async def route_cloture_daily(request: ClotureRequest, token: str = Depends(veri
             status_code=500, 
             detail=f"Erreur lors de la clôture : {str(e)}"
         )
+    
 
 @app.post("/analyse/scalp")
 async def route_analyse_scalp(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
@@ -440,6 +455,13 @@ async def route_analyse_scalp(data: TradeRequest, token: str = Depends(verifier_
     except Exception as e:
         logging.error(f"❌ Erreur critique route_analyse_scalp : {e}")
         return {"feedback": f"Erreur : {str(e)}", "engine_status": "ERROR"}
+    finally:
+        # NETTOYAGE SYSTÉMATIQUE
+        del shared_guard
+        del bridge
+        del app_mock
+        # Appel de ta fonction de nettoyage
+        purge_ram()
     
 @app.post("/database/save")
 async def route_sauvegarde_generique(data: TradeRequest, token: str = Depends(verifier_session_terminal)):
