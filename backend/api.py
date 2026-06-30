@@ -324,7 +324,7 @@ async def route_analyse_daily(data: TradeRequest, token: str = Depends(verifier_
             app_mock = AppMock({"ia_severite": "Strict" if is_locked else "Neutre"})
 
             # Utilisation de l'IA pour auditer le Daily
-            score, verdict, couleur = mentor_ia.analyser_ia_swing(
+            score, verdict, couleur = mentor_ia.analyser_ia_scalp(
             app_mock, 
             data.analyse,    # nouvelle_analyse
             data.actif,      # actif
