@@ -505,7 +505,8 @@ def get_news(actif, guard=None):
 
 # --- FONCTION PRIVÉE DE GESTION API (Léger & Réutilisable) ---
 def _exec_ia(prompt, client_architect, mode_upper):
-    client_architect = OpenAI(api_key=os.getenv("OPENAI_ARCHITECT_KEY"))
+    # Suppression de la ligne : client_architect = OpenAI(...)
+    # On utilise directement l'instance passée en argument
     try:
         response = client_architect.chat.completions.create(
             model="gpt-4o",
@@ -515,10 +516,14 @@ def _exec_ia(prompt, client_architect, mode_upper):
             ]
         )
         reponse_ia = response.choices[0].message.content 
+        
+        # Regex pour extraire les données
         match = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}', reponse_ia)
         couleur = match.group(0) if match else "#2B2B2B"
+        
         note_match = re.search(r'\d+', reponse_ia)
         score = int(note_match.group()) if note_match else 5
+        
         return score, reponse_ia, couleur 
     except Exception as e:
         return 0, f"Erreur : {e}", "#34495E"
@@ -534,15 +539,15 @@ def analyser_ia_swing(app_instance,  nouvelle_analyse, actif, data_json=None, cl
     # 3. CONTEXTUALISATION DES DONNÉES ISOLÉES
     # Si le trader a rempli des champs spécifiques, on les injecte ici
     donnees_techniques = ""
-    if data_json:
+    if isinstance(data_json, dict):    
         donnees_techniques = f"""
-        [DONNÉES TECHNIQUES ISOLÉES]
-        - Entry Price: {data_json.get('entry_price', 'N/A')}
-        - Stop Loss: {data_json.get('stop_loss', 'N/A')}
-        - Take Profit: {data_json.get('take_profit', 'N/A')}
-        - Calculateur Lots: {data_json.get('lot', 'N/A')}
-        - Stats Session (W/L/BE): {data_json.get('stats', 'N/A')}
-        """
+            [DONNÉES TECHNIQUES ISOLÉES]
+            - Entry Price: {data_json.get('entry_price', 'N/A')}
+            - Stop Loss: {data_json.get('stop_loss', 'N/A')}
+            - Take Profit: {data_json.get('take_profit', 'N/A')}
+            - Calculateur Lots: {data_json.get('lot', 'N/A')}
+            - Stats Session (W/L/BE): {data_json.get('stats', 'N/A')}
+            """
 
     # 4. RÉCUPÉRATION DES DONNÉES (Via l'orchestrateur MarketGuard)
     guard = MarketGuard() 
@@ -801,7 +806,7 @@ def analyser_ia_daily(app_instance, nouvelle_analyse,actif, data_json=None, clie
     # 3. CONTEXTUALISATION DES DONNÉES ISOLÉES
     # Si le trader a rempli des champs spécifiques, on les injecte ici
     donnees_techniques = ""
-    if data_json:
+    if isinstance(data_json, dict):    
         donnees_techniques = f"""
         [DONNÉES TECHNIQUES ISOLÉES]
         - Entry Price: {data_json.get('entry_price', 'N/A')}
@@ -1052,7 +1057,7 @@ def analyser_ia_scalp(app_instance,nouvelle_analyse, actif, data_json=None, clie
     # 3. CONTEXTUALISATION DES DONNÉES ISOLÉES
     # Si le trader a rempli des champs spécifiques, on les injecte ici
     donnees_techniques = ""
-    if data_json:
+    if isinstance(data_json, dict):    
         donnees_techniques = f"""
         [DONNÉES TECHNIQUES ISOLÉES]
         - Entry Price: {data_json.get('entry_price', 'N/A')}
